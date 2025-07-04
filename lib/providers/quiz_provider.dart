@@ -192,6 +192,34 @@ class QuizProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Helper method to compare boolean answers
+  bool _compareBooleanAnswers(String userAnswer, String correctAnswer) {
+    // Handle various boolean answer formats
+    final userLower = userAnswer.toLowerCase().trim();
+    final correctLower = correctAnswer.toString().toLowerCase().trim();
+
+    // Direct comparison after normalization
+    if (userLower == correctLower) {
+      return true;
+    }
+
+    // Handle different capitalizations
+    if ((userLower == 'true' && correctLower == 'true') ||
+        (userLower == 'false' && correctLower == 'false')) {
+      return true;
+    }
+
+    // Handle boolean vs string mismatches
+    if ((userAnswer == 'True' &&
+            (correctLower == 'true' || correctAnswer == 'True')) ||
+        (userAnswer == 'False' &&
+            (correctLower == 'false' || correctAnswer == 'False'))) {
+      return true;
+    }
+
+    return false;
+  }
+
   // Submit quiz
   Future<void> submitQuiz() async {
     if (_currentQuiz == null || _quizStartTime == null) return;
@@ -209,7 +237,30 @@ class QuizProvider extends ChangeNotifier {
         final question = _currentQuestions[i];
         final userAnswer = _userAnswers[i] ?? '';
         final correctAnswer = question.correctAnswer;
-        final isCorrect = userAnswer == correctAnswer;
+
+        // Special handling for boolean questions
+        bool isCorrect = false;
+
+        if (question.type == 'boolean' ||
+            (question.options != null &&
+                question.options!.length == 2 &&
+                question.options!.any((opt) => opt.toLowerCase() == 'true') &&
+                question.options!.any((opt) => opt.toLowerCase() == 'false'))) {
+          // Use special boolean comparison
+          isCorrect = _compareBooleanAnswers(userAnswer, correctAnswer);
+
+          // Debug logging for boolean questions
+          final questionPreview = question.question.length > 50
+              ? '${question.question.substring(0, 50)}...'
+              : question.question;
+          AppLogger.info('Boolean question: $questionPreview');
+          AppLogger.info(
+              'User answer: "$userAnswer", Correct answer: "$correctAnswer"');
+          AppLogger.info('Is correct: $isCorrect');
+        } else {
+          // Regular string comparison for other question types
+          isCorrect = userAnswer == correctAnswer;
+        }
 
         if (isCorrect) {
           correctAnswers++;
@@ -217,11 +268,18 @@ class QuizProvider extends ChangeNotifier {
           wrongQuestions.add(question);
           // Generate AI explanation for wrong answer
           if (userAnswer.isNotEmpty) {
-            final explanation = await _geminiService.explainWrongAnswer(
-              question: question,
-              userAnswer: userAnswer,
-            );
-            _wrongAnswerExplanations[i] = explanation;
+            try {
+              final explanation = await _geminiService.explainWrongAnswer(
+                question: question,
+                userAnswer: userAnswer,
+              );
+              _wrongAnswerExplanations[i] = explanation;
+            } catch (e) {
+              AppLogger.error('Failed to generate explanation for question $i',
+                  error: e);
+              _wrongAnswerExplanations[i] =
+                  'Unable to generate explanation at this time.';
+            }
           }
         }
 
@@ -275,25 +333,51 @@ class QuizProvider extends ChangeNotifier {
       // Award XP
       await _gamificationService.awardXP(_currentUserId, xpEarned);
 
-      // Generate AI feedback
-      _aiFeedback = await _geminiService.generateQuizFeedback(
-        quizResult: _lastResult!,
-        questions: _currentQuestions,
-        userAnswers: _userAnswers,
+      // Mark quiz as completed in user stats
+      await _databaseService.markQuizCompleted(
+        _currentUserId,
+        _currentQuiz!.id,
+        score,
+        xpEarned,
       );
+
+      // Generate AI feedback (optional, can be disabled if causing issues)
+      try {
+        _aiFeedback = await _geminiService.generateQuizFeedback(
+          quizResult: _lastResult!,
+          questions: _currentQuestions,
+          userAnswers: _userAnswers,
+        );
+      } catch (e) {
+        AppLogger.error('Failed to generate AI feedback', error: e);
+        _aiFeedback = null;
+      }
 
       // Generate learning recommendations
       if (wrongQuestions.isNotEmpty) {
-        _recommendations = await _geminiService.generateLearningRecommendations(
-          quizResult: _lastResult!,
-          wrongQuestions: wrongQuestions,
-          courseName: _currentQuiz!.category,
-        );
+        try {
+          _recommendations =
+              await _geminiService.generateLearningRecommendations(
+            quizResult: _lastResult!,
+            wrongQuestions: wrongQuestions,
+            courseName: _currentQuiz!.category,
+          );
+        } catch (e) {
+          AppLogger.error('Failed to generate recommendations', error: e);
+          _recommendations = [];
+        }
       }
 
       // Generate motivational message
-      _motivationalMessage =
-          await _geminiService.generateMotivationalMessage(score);
+      try {
+        _motivationalMessage =
+            await _geminiService.generateMotivationalMessage(score);
+      } catch (e) {
+        AppLogger.error('Failed to generate motivational message', error: e);
+        _motivationalMessage = score >= 70
+            ? "Great job! Keep up the excellent work!"
+            : "Don't give up! Every attempt brings you closer to mastery.";
+      }
     } catch (e) {
       _error = 'Failed to submit quiz: $e';
       AppLogger.error('Failed to submit quiz', error: e);

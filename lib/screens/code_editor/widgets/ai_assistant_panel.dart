@@ -6,7 +6,7 @@ import 'package:procode/config/theme.dart';
 class AIAssistantPanel extends StatefulWidget {
   final String code;
   final String language;
-  final CodeChallenge? challenge;
+  final CodeChallengeModel? challenge;
   final VoidCallback onClose;
   final ValueChanged<String> onApplySuggestion;
 

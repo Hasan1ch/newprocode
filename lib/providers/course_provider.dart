@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:procode/models/course_model.dart';
@@ -6,6 +7,7 @@ import 'package:procode/models/lesson_model.dart';
 import 'package:procode/models/progress_model.dart';
 import 'package:procode/config/firebase_config.dart';
 import 'package:procode/services/auth_service.dart';
+import 'package:procode/services/database_service.dart';
 
 // Type aliases to match model names
 typedef Course = CourseModel;
@@ -16,6 +18,11 @@ typedef Progress = ProgressModel;
 class CourseProvider extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final AuthService _authService = AuthService();
+  final DatabaseService _databaseService = DatabaseService();
+
+  // Add real-time subscription
+  StreamSubscription<QuerySnapshot>? _progressSubscription;
+  StreamSubscription<QuerySnapshot>? _modulesSubscription;
 
   List<Course> _courses = [];
   List<Course> _enrolledCourses = [];
@@ -26,6 +33,7 @@ class CourseProvider extends ChangeNotifier {
   Lesson? _currentLesson;
   bool _isLoading = false;
   String? _error;
+  bool _isInitialized = false;
 
   // Getters
   List<Course> get courses => _courses;
@@ -44,6 +52,15 @@ class CourseProvider extends ChangeNotifier {
     return _userProgress[courseId];
   }
 
+  // Initialize real-time listeners
+  Future<void> initializeRealTimeListeners() async {
+    if (_isInitialized || _authService.currentUser == null) return;
+
+    _isInitialized = true;
+    await _loadEnrolledCoursesRealtime();
+    _loadModulesRealtime();
+  }
+
   // Load all courses
   Future<void> loadCourses() async {
     try {
@@ -51,21 +68,12 @@ class CourseProvider extends ChangeNotifier {
       _error = null;
       notifyListeners();
 
-      final snapshot = await _firestore
-          .collection(FirebaseConfig.coursesCollection)
-          .orderBy('orderIndex') // Changed from 'order' to match your model
-          .get();
+      // Use the database service instead of direct Firestore
+      _courses = await _databaseService.getAllCourses();
 
-      _courses = snapshot.docs
-          .map((doc) => Course.fromJson({
-                'id': doc.id,
-                ...doc.data(),
-              }))
-          .toList();
-
-      // Load user's enrolled courses
-      if (_authService.currentUser != null) {
-        await _loadEnrolledCourses();
+      // Initialize real-time listeners if user is logged in
+      if (_authService.currentUser != null && !_isInitialized) {
+        await initializeRealTimeListeners();
       }
 
       _isLoading = false;
@@ -77,7 +85,7 @@ class CourseProvider extends ChangeNotifier {
     }
   }
 
-  // Load enrolled courses
+  // Load enrolled courses (keeping original for compatibility)
   Future<void> _loadEnrolledCourses() async {
     try {
       final userId = _authService.currentUser!.uid;
@@ -106,25 +114,110 @@ class CourseProvider extends ChangeNotifier {
     }
   }
 
+  // NEW: Load enrolled courses with real-time updates
+  Future<void> _loadEnrolledCoursesRealtime() async {
+    try {
+      final userId = _authService.currentUser!.uid;
+
+      // Cancel existing subscription
+      _progressSubscription?.cancel();
+
+      // Set up real-time listener for progress collection
+      _progressSubscription = _firestore
+          .collection(FirebaseConfig.progressCollection)
+          .where('userId', isEqualTo: userId)
+          .snapshots()
+          .listen((snapshot) async {
+        // Get course IDs from progress documents
+        final courseIds = snapshot.docs
+            .map((doc) => doc.data()['courseId'] as String)
+            .toSet()
+            .toList();
+
+        // If courses haven't been loaded yet, load them first
+        if (_courses.isEmpty) {
+          _courses = await _databaseService.getAllCourses();
+        }
+
+        // Update enrolled courses
+        _enrolledCourses =
+            _courses.where((course) => courseIds.contains(course.id)).toList();
+
+        // Update progress for each enrolled course
+        _userProgress.clear();
+        for (final doc in snapshot.docs) {
+          final progress = Progress.fromJson({
+            'id': doc.id,
+            ...doc.data(),
+          });
+          _userProgress[progress.courseId] = progress;
+
+          // Load modules for this course if not already loaded
+          if (!_courseModules.containsKey(progress.courseId)) {
+            await loadModulesForCourse(progress.courseId);
+          }
+        }
+
+        notifyListeners();
+        print(
+            'Real-time progress update: ${_enrolledCourses.length} courses enrolled');
+      }, onError: (error) {
+        print('Error in progress real-time listener: $error');
+        // Fallback to regular loading
+        _loadEnrolledCourses();
+      });
+    } catch (e) {
+      print('Error loading enrolled courses with real-time: $e');
+      // Fallback to regular loading
+      await _loadEnrolledCourses();
+    }
+  }
+
+  // Load modules with real-time updates
+  void _loadModulesRealtime() {
+    if (_authService.currentUser == null) return;
+
+    _modulesSubscription?.cancel();
+
+    // Listen to all modules (we'll filter by course as needed)
+    _modulesSubscription =
+        _firestore.collection('modules').snapshots().listen((snapshot) {
+      // Group modules by course
+      final modulesByCourse = <String, List<Module>>{};
+
+      for (final doc in snapshot.docs) {
+        final module = Module.fromJson({
+          'id': doc.id,
+          ...doc.data(),
+        });
+
+        if (!modulesByCourse.containsKey(module.courseId)) {
+          modulesByCourse[module.courseId] = [];
+        }
+        modulesByCourse[module.courseId]!.add(module);
+      }
+
+      // Sort modules by orderIndex
+      modulesByCourse.forEach((courseId, modules) {
+        modules.sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
+        _courseModules[courseId] = modules;
+      });
+
+      notifyListeners();
+    }, onError: (error) {
+      print('Error in modules real-time listener: $error');
+    });
+  }
+
   // Load modules for a course
   Future<void> loadModulesForCourse(String courseId) async {
     try {
       _isLoading = true;
       notifyListeners();
 
-      final snapshot = await _firestore
-          .collection(FirebaseConfig.coursesCollection)
-          .doc(courseId)
-          .collection(FirebaseConfig.modulesCollection)
-          .orderBy('orderIndex') // Changed from 'order' to match your model
-          .get();
-
-      _courseModules[courseId] = snapshot.docs
-          .map((doc) => Module.fromJson({
-                'id': doc.id,
-                ...doc.data(),
-              }))
-          .toList();
+      // Use database service
+      _courseModules[courseId] =
+          await _databaseService.getCourseModules(courseId);
 
       _isLoading = false;
       notifyListeners();
@@ -139,21 +232,8 @@ class CourseProvider extends ChangeNotifier {
   Future<List<Lesson>> loadLessonsForModule(
       String courseId, String moduleId) async {
     try {
-      final snapshot = await _firestore
-          .collection(FirebaseConfig.coursesCollection)
-          .doc(courseId)
-          .collection(FirebaseConfig.modulesCollection)
-          .doc(moduleId)
-          .collection(FirebaseConfig.lessonsCollection)
-          .orderBy('orderIndex') // Changed from 'order' to match your model
-          .get();
-
-      return snapshot.docs
-          .map((doc) => Lesson.fromJson({
-                'id': doc.id,
-                ...doc.data(),
-              }))
-          .toList();
+      // Use database service
+      return await _databaseService.getModuleLessons(moduleId);
     } catch (e) {
       print('Error loading lessons: $e');
       return [];
@@ -173,12 +253,12 @@ class CourseProvider extends ChangeNotifier {
         completedModules: [],
         currentModuleId: '',
         currentLessonId: '',
-        lastAccessedLesson: '', // Added this
+        lastAccessedLesson: '',
         lastAccessedAt: DateTime.now(),
         enrolledAt: DateTime.now(),
         totalXpEarned: 0,
         quizScores: {},
-        completionPercentage: 0.0, // Added this
+        completionPercentage: 0.0,
       );
 
       final docRef = await _firestore
@@ -339,12 +419,68 @@ class CourseProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Get courses by language filter
+  Future<List<Course>> getCoursesByLanguage(String language) async {
+    try {
+      if (language == 'all') {
+        return _courses;
+      }
+      return await _databaseService.getCoursesByLanguage(language);
+    } catch (e) {
+      print('Error getting courses by language: $e');
+      return [];
+    }
+  }
+
+  // Get featured courses
+  Future<List<Course>> getFeaturedCourses() async {
+    try {
+      return await _databaseService.getFeaturedCourses();
+    } catch (e) {
+      print('Error getting featured courses: $e');
+      return [];
+    }
+  }
+
+  // Search courses
+  List<Course> searchCourses(String query) {
+    if (query.isEmpty) {
+      return _courses;
+    }
+
+    final lowercaseQuery = query.toLowerCase();
+    return _courses.where((course) {
+      return course.title.toLowerCase().contains(lowercaseQuery) ||
+          course.description.toLowerCase().contains(lowercaseQuery) ||
+          course.tags.any((tag) => tag.toLowerCase().contains(lowercaseQuery));
+    }).toList();
+  }
+
+  // Get course by ID
+  Future<Course?> getCourseById(String courseId) async {
+    try {
+      return await _databaseService.getCourseById(courseId);
+    } catch (e) {
+      print('Error getting course by id: $e');
+      return null;
+    }
+  }
+
+  // Force refresh all data
+  Future<void> refresh() async {
+    _isInitialized = false;
+    await loadCourses();
+  }
+
   @override
   void dispose() {
+    _progressSubscription?.cancel();
+    _modulesSubscription?.cancel();
     _courses.clear();
     _enrolledCourses.clear();
     _courseModules.clear();
     _userProgress.clear();
+    _isInitialized = false;
     super.dispose();
   }
 }

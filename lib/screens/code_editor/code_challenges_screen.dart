@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:procode/models/code_challenge_model.dart' as models;
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:procode/models/code_challenge_model.dart';
 import 'package:procode/screens/code_editor/code_editor_screen.dart';
 import 'package:procode/services/code_editor_service.dart';
 import 'package:procode/widgets/animations/fade_animation.dart';
@@ -18,10 +19,16 @@ class _CodeChallengesScreenState extends State<CodeChallengesScreen> {
   String _selectedLanguage = 'All';
   String _selectedDifficulty = 'All';
   String _selectedCategory = 'All';
-  List<models.CodeChallenge> _challenges = [];
+  List<CodeChallengeModel> _challenges = [];
   bool _isLoading = true;
 
-  final List<String> _languages = ['All', 'Python', 'JavaScript', 'Java'];
+  final List<String> _languages = [
+    'All',
+    'Python',
+    'JavaScript',
+    'Java',
+    'C++'
+  ];
   final List<String> _difficulties = ['All', 'Easy', 'Medium', 'Hard'];
   final List<String> _categories = [
     'All',
@@ -58,7 +65,7 @@ class _CodeChallengesScreenState extends State<CodeChallengesScreen> {
     }
   }
 
-  List<models.CodeChallenge> get _filteredChallenges {
+  List<CodeChallengeModel> get _filteredChallenges {
     return _challenges.where((challenge) {
       if (_selectedLanguage != 'All' &&
           challenge.language.toLowerCase() != _selectedLanguage.toLowerCase()) {
@@ -100,6 +107,15 @@ class _CodeChallengesScreenState extends State<CodeChallengesScreen> {
         foregroundColor: theme.colorScheme.onPrimary,
         elevation: 0,
         title: const Text('Code Challenges'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.history),
+            onPressed: () {
+              // Navigate to submission history
+            },
+            tooltip: 'Submission History',
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -184,6 +200,11 @@ class _CodeChallengesScreenState extends State<CodeChallengesScreen> {
                                 color: theme.colorScheme.onSurfaceVariant,
                               ),
                             ),
+                            const SizedBox(height: 24),
+                            ElevatedButton(
+                              onPressed: _createSampleChallenges,
+                              child: const Text('Create Sample Challenges'),
+                            ),
                           ],
                         ),
                       )
@@ -247,7 +268,7 @@ class _CodeChallengesScreenState extends State<CodeChallengesScreen> {
     );
   }
 
-  Widget _buildChallengeCard(models.CodeChallenge challenge) {
+  Widget _buildChallengeCard(CodeChallengeModel challenge) {
     final theme = Theme.of(context);
 
     return Card(
@@ -261,7 +282,9 @@ class _CodeChallengesScreenState extends State<CodeChallengesScreen> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => const CodeEditorScreen(),
+              builder: (context) => CodeEditorScreen(
+                challenge: challenge,
+              ),
             ),
           );
         },
@@ -378,5 +401,160 @@ class _CodeChallengesScreenState extends State<CodeChallengesScreen> {
         ],
       ),
     );
+  }
+
+  // Create sample challenges for testing
+  Future<void> _createSampleChallenges() async {
+    final sampleChallenges = [
+      {
+        'title': 'Two Sum',
+        'description':
+            'Given an array of integers and a target sum, return indices of two numbers that add up to the target.',
+        'language': 'Python',
+        'difficulty': 'Easy',
+        'category': 'Arrays',
+        'initialCode': '''def twoSum(nums, target):
+    # Your code here
+    pass
+
+# Test your solution
+nums = [2, 7, 11, 15]
+target = 9
+print(twoSum(nums, target))''',
+        'solution': '''def twoSum(nums, target):
+    seen = {}
+    for i, num in enumerate(nums):
+        complement = target - num
+        if complement in seen:
+            return [seen[complement], i]
+        seen[num] = i
+    return []''',
+        'testCases': [
+          {
+            'input': '[2,7,11,15]\n9',
+            'expectedOutput': '[0, 1]',
+            'description': 'Basic test case',
+          },
+          {
+            'input': '[3,2,4]\n6',
+            'expectedOutput': '[1, 2]',
+            'description': 'Different order',
+          },
+        ],
+        'xpReward': 10,
+        'hints': {
+          'hint1': 'Try using a hash map to store values you\'ve seen.',
+          'hint2':
+              'For each number, check if target - number exists in your map.',
+        },
+      },
+      {
+        'title': 'Palindrome Check',
+        'description':
+            'Write a function to check if a given string is a palindrome.',
+        'language': 'JavaScript',
+        'difficulty': 'Easy',
+        'category': 'Strings',
+        'initialCode': '''function isPalindrome(str) {
+    // Your code here
+    return false;
+}
+
+// Test your solution
+console.log(isPalindrome("racecar"));
+console.log(isPalindrome("hello"));''',
+        'solution': '''function isPalindrome(str) {
+    const cleaned = str.toLowerCase().replace(/[^a-z0-9]/g, '');
+    return cleaned === cleaned.split('').reverse().join('');
+}''',
+        'testCases': [
+          {
+            'input': 'racecar',
+            'expectedOutput': 'true',
+            'description': 'Simple palindrome',
+          },
+          {
+            'input': 'hello',
+            'expectedOutput': 'false',
+            'description': 'Not a palindrome',
+          },
+        ],
+        'xpReward': 10,
+        'hints': {
+          'hint1':
+              'Convert to lowercase and remove non-alphanumeric characters first.',
+          'hint2': 'Compare the string with its reverse.',
+        },
+      },
+      {
+        'title': 'Fibonacci Sequence',
+        'description': 'Generate the nth Fibonacci number.',
+        'language': 'Python',
+        'difficulty': 'Medium',
+        'category': 'Algorithms',
+        'initialCode': '''def fibonacci(n):
+    # Your code here
+    pass
+
+# Test your solution
+print(fibonacci(10))''',
+        'solution': '''def fibonacci(n):
+    if n <= 0:
+        return 0
+    elif n == 1:
+        return 1
+    
+    a, b = 0, 1
+    for _ in range(2, n + 1):
+        a, b = b, a + b
+    return b''',
+        'testCases': [
+          {
+            'input': '10',
+            'expectedOutput': '55',
+            'description': '10th Fibonacci number',
+          },
+          {
+            'input': '0',
+            'expectedOutput': '0',
+            'description': 'Base case',
+          },
+        ],
+        'xpReward': 20,
+        'hints': {
+          'hint1': 'Use iterative approach for better performance.',
+          'hint2': 'Keep track of the last two numbers.',
+        },
+      },
+    ];
+
+    try {
+      final batch = FirebaseFirestore.instance.batch();
+
+      for (final challenge in sampleChallenges) {
+        final docRef =
+            FirebaseFirestore.instance.collection('challenges').doc();
+        batch.set(docRef, {
+          ...challenge,
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      await batch.commit();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Sample challenges created!')),
+        );
+        _loadChallenges();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error creating challenges: $e')),
+        );
+      }
+    }
   }
 }

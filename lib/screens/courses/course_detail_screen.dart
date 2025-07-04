@@ -31,6 +31,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
     final courseProvider = context.watch<CourseProvider>();
     final authProvider = context.watch<app_auth.AuthProvider>();
     final modules = courseProvider.getModulesForCourse(widget.course.id);
+    print('Modules loaded: ${modules.length}');
     final progress = courseProvider.getProgressForCourse(widget.course.id);
     final isEnrolled =
         courseProvider.enrolledCourses.any((c) => c.id == widget.course.id);

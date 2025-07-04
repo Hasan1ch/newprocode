@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:procode/config/theme.dart';
 
 class StatsCard extends StatelessWidget {
@@ -6,6 +7,7 @@ class StatsCard extends StatelessWidget {
   final String value;
   final IconData icon;
   final Color color;
+  final bool isLoading;
 
   const StatsCard({
     Key? key,
@@ -13,6 +15,7 @@ class StatsCard extends StatelessWidget {
     required this.value,
     required this.icon,
     required this.color,
+    this.isLoading = false,
   }) : super(key: key);
 
   @override
@@ -44,22 +47,50 @@ class StatsCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          Text(
-            value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
+          if (isLoading)
+            Shimmer.fromColors(
+              baseColor: Colors.grey[700]!,
+              highlightColor: Colors.grey[500]!,
+              child: Container(
+                width: 60,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            )
+          else
+            Text(
+              value,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
           const SizedBox(height: 4),
-          Text(
-            title,
-            style: TextStyle(
-              color: Colors.grey[400],
-              fontSize: 14,
+          if (isLoading)
+            Shimmer.fromColors(
+              baseColor: Colors.grey[700]!,
+              highlightColor: Colors.grey[500]!,
+              child: Container(
+                width: 80,
+                height: 14,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            )
+          else
+            Text(
+              title,
+              style: TextStyle(
+                color: Colors.grey[400],
+                fontSize: 14,
+              ),
             ),
-          ),
         ],
       ),
     );

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:procode/models/module_model.dart' as models;
 import 'package:procode/models/lesson_model.dart' as models;
+import 'package:procode/models/quiz_model.dart';
 import 'package:procode/providers/course_provider.dart';
 import 'package:procode/screens/courses/lesson_screen.dart';
+import 'package:procode/screens/quiz/quiz_intro_screen.dart';
 import 'package:procode/widgets/common/custom_app_bar.dart';
 
 class ModuleScreen extends StatefulWidget {
@@ -305,8 +308,68 @@ class _ModuleScreenState extends State<ModuleScreen> {
 
     return InkWell(
       onTap: allLessonsCompleted
-          ? () {
-              // Navigate to quiz
+          ? () async {
+              // Load the quiz data first
+              try {
+                // Show loading indicator
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) => const Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                );
+
+                // Load quiz from Firestore
+                final quizDoc = await FirebaseFirestore.instance
+                    .collection('quizzes')
+                    .doc(widget.module.quizId!)
+                    .get();
+
+                if (!mounted) return;
+
+                if (!quizDoc.exists) {
+                  Navigator.pop(context); // Remove loading
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Quiz not found'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+
+                // Create Quiz object from data
+                final quizData = quizDoc.data()!;
+                final quiz = QuizModel.fromJson({
+                  'id': quizDoc.id,
+                  ...quizData,
+                });
+
+                if (!mounted) return;
+
+                Navigator.pop(context); // Remove loading
+
+                // Navigate to quiz intro screen with the Quiz object
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => QuizIntroScreen(
+                      quiz: quiz,
+                    ),
+                  ),
+                );
+              } catch (e) {
+                if (!mounted) return;
+
+                Navigator.pop(context); // Remove loading
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error loading quiz: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
             }
           : null,
       borderRadius: BorderRadius.circular(12),

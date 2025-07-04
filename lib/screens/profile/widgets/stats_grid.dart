@@ -1,14 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:procode/providers/user_provider.dart';
+import 'package:procode/providers/course_provider.dart';
 import 'package:procode/config/theme.dart';
+import 'package:shimmer/shimmer.dart';
 
 class StatsGrid extends StatelessWidget {
   const StatsGrid({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final stats = context.watch<UserProvider>().stats;
+    final userProvider = context.watch<UserProvider>();
+    final courseProvider = context.watch<CourseProvider>();
+    final stats = userProvider.stats;
+    final isLoading = userProvider.isLoading;
+
+    // Get actual enrolled courses count
+    final enrolledCoursesCount = courseProvider.enrolledCourses.length;
 
     return GridView.count(
       shrinkWrap: true,
@@ -23,12 +31,14 @@ class StatsGrid extends StatelessWidget {
           title: 'Total XP',
           value: stats['totalXP']?.toString() ?? '0',
           gradient: AppTheme.primaryGradient,
+          isLoading: isLoading,
         ),
         _StatCard(
           icon: Icons.emoji_events,
           title: 'Level',
           value: stats['level']?.toString() ?? '1',
           gradient: AppTheme.accentGradient,
+          isLoading: isLoading,
         ),
         _StatCard(
           icon: Icons.local_fire_department,
@@ -39,16 +49,18 @@ class StatsGrid extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
+          isLoading: isLoading,
         ),
         _StatCard(
           icon: Icons.school,
           title: 'Courses',
-          value: stats['coursesCompleted']?.toString() ?? '0',
+          value: enrolledCoursesCount.toString(),
           gradient: LinearGradient(
             colors: [Colors.green[600]!, Colors.teal[600]!],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
+          isLoading: isLoading || courseProvider.isLoading,
         ),
       ],
     );
@@ -60,12 +72,14 @@ class _StatCard extends StatelessWidget {
   final String title;
   final String value;
   final LinearGradient gradient;
+  final bool isLoading;
 
   const _StatCard({
     required this.icon,
     required this.title,
     required this.value,
     required this.gradient,
+    this.isLoading = false,
   });
 
   @override
@@ -104,16 +118,31 @@ class _StatCard extends StatelessWidget {
                   color: isDark ? gradient.colors[0] : Colors.white,
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: isDark
-                        ? Theme.of(context).colorScheme.onSurface
-                        : Colors.white,
+                if (isLoading)
+                  Shimmer.fromColors(
+                    baseColor: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+                    highlightColor:
+                        isDark ? Colors.grey[500]! : Colors.grey[100]!,
+                    child: Container(
+                      width: 60,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  )
+                else
+                  Text(
+                    value,
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: isDark
+                          ? Theme.of(context).colorScheme.onSurface
+                          : Colors.white,
+                    ),
                   ),
-                ),
                 const SizedBox(height: 4),
                 Text(
                   title,

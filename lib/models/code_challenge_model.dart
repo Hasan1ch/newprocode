@@ -1,146 +1,99 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// Model representing a code challenge
 class CodeChallengeModel {
   final String id;
   final String title;
   final String description;
-  final String difficulty; // easy, medium, hard
-  final String language; // python, javascript, java, etc.
-  final String category; // arrays, strings, algorithms, etc.
-  final String problemStatement;
+  final String language;
+  final String difficulty;
+  final String category;
   final String initialCode;
-  final List<TestCase> testCases;
   final String solution;
-  final String explanation;
+  final List<TestCase> testCases;
   final int xpReward;
-  final List<String> hints;
-  final Map<String, dynamic>? constraints;
+  final Map<String, String> hints;
   final DateTime createdAt;
+  final DateTime updatedAt;
 
   CodeChallengeModel({
     required this.id,
     required this.title,
     required this.description,
-    required this.difficulty,
     required this.language,
+    required this.difficulty,
     required this.category,
-    required this.problemStatement,
     required this.initialCode,
-    required this.testCases,
     required this.solution,
-    required this.explanation,
+    required this.testCases,
     required this.xpReward,
     required this.hints,
-    this.constraints,
     required this.createdAt,
+    required this.updatedAt,
   });
 
-  /// Create CodeChallengeModel from JSON
   factory CodeChallengeModel.fromJson(Map<String, dynamic> json) {
     return CodeChallengeModel(
       id: json['id'] ?? '',
       title: json['title'] ?? '',
       description: json['description'] ?? '',
-      difficulty: json['difficulty'] ?? 'easy',
       language: json['language'] ?? 'python',
-      category: json['category'] ?? 'general',
-      problemStatement: json['problemStatement'] ?? '',
+      difficulty: json['difficulty'] ?? 'Easy',
+      category: json['category'] ?? 'General',
       initialCode: json['initialCode'] ?? '',
-      testCases: (json['testCases'] as List?)
-              ?.map((tc) => TestCase.fromJson(tc))
+      solution: json['solution'] ?? '',
+      testCases: (json['testCases'] as List<dynamic>?)
+              ?.map((e) => TestCase.fromJson(e))
               .toList() ??
           [],
-      solution: json['solution'] ?? '',
-      explanation: json['explanation'] ?? '',
-      xpReward: json['xpReward'] ?? 30,
-      hints: List<String>.from(json['hints'] ?? []),
-      constraints: json['constraints'],
+      xpReward: json['xpReward'] ?? 10,
+      hints: Map<String, String>.from(json['hints'] ?? {}),
       createdAt: json['createdAt'] != null
           ? (json['createdAt'] as Timestamp).toDate()
+          : DateTime.now(),
+      updatedAt: json['updatedAt'] != null
+          ? (json['updatedAt'] as Timestamp).toDate()
           : DateTime.now(),
     );
   }
 
-  /// Convert CodeChallengeModel to JSON
   Map<String, dynamic> toJson() {
     return {
       'id': id,
       'title': title,
       'description': description,
-      'difficulty': difficulty,
       'language': language,
+      'difficulty': difficulty,
       'category': category,
-      'problemStatement': problemStatement,
       'initialCode': initialCode,
-      'testCases': testCases.map((tc) => tc.toJson()).toList(),
       'solution': solution,
-      'explanation': explanation,
+      'testCases': testCases.map((e) => e.toJson()).toList(),
       'xpReward': xpReward,
       'hints': hints,
-      'constraints': constraints,
       'createdAt': Timestamp.fromDate(createdAt),
+      'updatedAt': Timestamp.fromDate(updatedAt),
     };
-  }
-
-  /// Create a copy with updated fields
-  CodeChallengeModel copyWith({
-    String? id,
-    String? title,
-    String? description,
-    String? difficulty,
-    String? language,
-    String? category,
-    String? problemStatement,
-    String? initialCode,
-    List<TestCase>? testCases,
-    String? solution,
-    String? explanation,
-    int? xpReward,
-    List<String>? hints,
-    Map<String, dynamic>? constraints,
-    DateTime? createdAt,
-  }) {
-    return CodeChallengeModel(
-      id: id ?? this.id,
-      title: title ?? this.title,
-      description: description ?? this.description,
-      difficulty: difficulty ?? this.difficulty,
-      language: language ?? this.language,
-      category: category ?? this.category,
-      problemStatement: problemStatement ?? this.problemStatement,
-      initialCode: initialCode ?? this.initialCode,
-      testCases: testCases ?? this.testCases,
-      solution: solution ?? this.solution,
-      explanation: explanation ?? this.explanation,
-      xpReward: xpReward ?? this.xpReward,
-      hints: hints ?? this.hints,
-      constraints: constraints ?? this.constraints,
-      createdAt: createdAt ?? this.createdAt,
-    );
   }
 }
 
-/// Model representing a test case for code challenges
 class TestCase {
   final String input;
   final String expectedOutput;
+  final String description;
   final bool isHidden;
-  final String? explanation;
 
   TestCase({
     required this.input,
     required this.expectedOutput,
+    required this.description,
     this.isHidden = false,
-    this.explanation,
   });
 
   factory TestCase.fromJson(Map<String, dynamic> json) {
     return TestCase(
       input: json['input'] ?? '',
       expectedOutput: json['expectedOutput'] ?? '',
+      description: json['description'] ?? '',
       isHidden: json['isHidden'] ?? false,
-      explanation: json['explanation'],
     );
   }
 
@@ -148,10 +101,8 @@ class TestCase {
     return {
       'input': input,
       'expectedOutput': expectedOutput,
+      'description': description,
       'isHidden': isHidden,
-      'explanation': explanation,
     };
   }
 }
-
-typedef CodeChallenge = CodeChallengeModel;

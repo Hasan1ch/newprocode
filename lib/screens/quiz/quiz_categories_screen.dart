@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:procode/providers/user_provider.dart';
 import 'package:procode/screens/quiz/quiz_list_screen.dart';
 import 'package:procode/widgets/animations/fade_animation.dart';
 import 'package:procode/widgets/animations/slide_animation.dart';
+import 'package:shimmer/shimmer.dart';
 
 class QuizCategoriesScreen extends StatefulWidget {
   const QuizCategoriesScreen({super.key});
@@ -235,46 +238,75 @@ class _QuizCategoriesScreenState extends State<QuizCategoriesScreen> {
   Widget _buildStatsSection(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.dividerColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Consumer<UserProvider>(
+      builder: (context, userProvider, _) {
+        final userStats = userProvider.userStats;
+        final user = userProvider.user;
+        final isLoading = userProvider.isLoading;
+
+        // Calculate average score from quiz history if available
+        final avgScore = userStats != null && userStats.quizzesCompleted > 0
+            ? (userStats.perfectQuizzes / userStats.quizzesCompleted * 100)
+                .toStringAsFixed(0)
+            : '0';
+
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: theme.dividerColor),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Your Quiz Stats',
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Your Quiz Stats',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Icon(
+                    Icons.insights,
+                    color: theme.colorScheme.primary,
+                  ),
+                ],
               ),
-              Icon(
-                Icons.insights,
-                color: theme.colorScheme.primary,
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildStat(
+                    'Total Quizzes',
+                    userStats?.quizzesCompleted.toString() ?? '0',
+                    Icons.quiz,
+                    isLoading,
+                  ),
+                  _buildStat(
+                    'Avg. Score',
+                    '$avgScore%',
+                    Icons.trending_up,
+                    isLoading,
+                  ),
+                  _buildStat(
+                    'Total XP',
+                    user?.totalXP.toString() ?? '0',
+                    Icons.star,
+                    isLoading,
+                  ),
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildStat('Total Quizzes', '47', Icons.quiz),
-              _buildStat('Avg. Score', '82%', Icons.trending_up),
-              _buildStat('Total XP', '1,235', Icons.star),
-            ],
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildStat(String label, String value, IconData icon) {
+  Widget _buildStat(String label, String value, IconData icon, bool isLoading) {
     final theme = Theme.of(context);
 
     return Column(
@@ -285,12 +317,26 @@ class _QuizCategoriesScreenState extends State<QuizCategoriesScreen> {
           size: 24,
         ),
         const SizedBox(height: 8),
-        Text(
-          value,
-          style: theme.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
+        if (isLoading)
+          Shimmer.fromColors(
+            baseColor: Colors.grey[700]!,
+            highlightColor: Colors.grey[500]!,
+            child: Container(
+              width: 50,
+              height: 24,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          )
+        else
+          Text(
+            value,
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
           ),
-        ),
         const SizedBox(height: 4),
         Text(
           label,

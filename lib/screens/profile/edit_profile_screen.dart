@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:procode/providers/user_provider.dart';
 import 'package:procode/screens/profile/widgets/avatar_selector.dart';
 import 'package:procode/widgets/common/custom_text_field.dart';
+import 'package:procode/widgets/common/country_selector.dart';
 import 'package:procode/widgets/common/custom_button.dart';
 import 'package:procode/widgets/common/loading_widget.dart';
 import 'package:procode/utils/validators.dart';
@@ -20,8 +21,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   final _displayNameController = TextEditingController();
   final _bioController = TextEditingController();
-  final _countryController = TextEditingController();
-  final _learningGoalController = TextEditingController();
+  String? _selectedCountry;
+  String? _selectedLearningGoal;
 
   String? _selectedAvatarPath;
   bool _isLoading = false;
@@ -37,8 +38,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (user != null) {
       _displayNameController.text = user.displayName;
       _bioController.text = user.bio ?? '';
-      _countryController.text = user.country ?? '';
-      _learningGoalController.text = user.learningGoal ?? '';
+      _selectedCountry = user.country;
+      _selectedLearningGoal = user.learningGoal;
     }
   }
 
@@ -46,8 +47,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   void dispose() {
     _displayNameController.dispose();
     _bioController.dispose();
-    _countryController.dispose();
-    _learningGoalController.dispose();
     super.dispose();
   }
 
@@ -70,8 +69,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       await userProvider.updateProfile(
         displayName: _displayNameController.text.trim(),
         bio: _bioController.text.trim(),
-        country: _countryController.text.trim(),
-        learningGoal: _learningGoalController.text.trim(),
+        country: _selectedCountry,
+        learningGoal: _selectedLearningGoal,
         imageFile: imageFile,
       );
 
@@ -151,31 +150,50 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Country
-                    CustomTextField(
-                      controller: _countryController,
+                    // Country Selector
+                    CountrySelector(
                       label: 'Country',
                       hint: 'Where are you from?',
-                      prefixIcon: const Icon(Icons.location_on_outlined),
-                      textCapitalization: TextCapitalization.words,
+                      selectedCountry: _selectedCountry,
+                      onCountrySelected: (country) {
+                        setState(() => _selectedCountry = country);
+                      },
                     ),
                     const SizedBox(height: 16),
 
                     // Learning Goal
                     Text(
                       'Learning Goal',
-                      style: Theme.of(context).textTheme.titleSmall,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
                     ),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<String>(
-                      value: _learningGoalController.text.isEmpty
-                          ? null
-                          : _learningGoalController.text,
+                      value: _selectedLearningGoal,
                       decoration: InputDecoration(
                         hintText: 'Select your primary goal',
                         prefixIcon: const Icon(Icons.flag_outlined),
+                        filled: true,
+                        fillColor: Theme.of(context).colorScheme.surface,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: Theme.of(context).colorScheme.primary,
+                            width: 2,
+                          ),
                         ),
                       ),
                       items: AppConstants.learningGoals
@@ -185,9 +203,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               ))
                           .toList(),
                       onChanged: (value) {
-                        if (value != null) {
-                          _learningGoalController.text = value;
-                        }
+                        setState(() => _selectedLearningGoal = value);
                       },
                     ),
                     const SizedBox(height: 32),

@@ -6,6 +6,10 @@ import 'package:procode/models/quiz_model.dart';
 import 'package:procode/models/question_model.dart';
 import 'package:procode/models/quiz_result_model.dart';
 import 'package:procode/models/user_stats_model.dart';
+// Add these imports for course functionality
+import 'package:procode/models/course_model.dart';
+import 'package:procode/models/module_model.dart';
+import 'package:procode/models/lesson_model.dart';
 
 class DatabaseService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -24,12 +28,21 @@ class DatabaseService {
     try {
       await _usersCollection.doc(user.id).set(user.toFirestore());
 
-      // Create user stats document
+      // Create user stats document with same XP values
       await _userStatsCollection.doc(user.id).set({
-        'totalXP': 0,
-        'totalLessonsCompleted': 0,
-        'totalQuizzesCompleted': 0,
+        'totalXP': user.totalXP,
+        'level': user.level,
+        'currentStreak': user.currentStreak,
+        'longestStreak': user.longestStreak,
+        'lessonsCompleted': 0,
+        'quizzesCompleted': 0,
+        'challengesCompleted': 0,
+        'coursesCompleted': 0,
+        'perfectQuizzes': 0,
         'totalTimeSpent': 0,
+        'lastActiveDate': FieldValue.serverTimestamp(),
+        'xpHistory': {},
+        'dailyXP': {},
         'lastUpdated': FieldValue.serverTimestamp(),
       });
 
@@ -205,53 +218,107 @@ class DatabaseService {
 
   // Gamification operations
 
-  // Update user streak
+  // Update user streak - FIXED VERSION
   Future<void> updateStreak(String uid) async {
     try {
-      DocumentSnapshot doc = await _usersCollection.doc(uid).get();
-      if (!doc.exists) return;
+      // Use a transaction to ensure atomic updates
+      await _firestore.runTransaction((transaction) async {
+        // Get both user and user_stats documents
+        DocumentSnapshot userDoc =
+            await transaction.get(_usersCollection.doc(uid));
+        DocumentSnapshot statsDoc =
+            await transaction.get(_userStatsCollection.doc(uid));
 
-      Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-      DateTime? lastLogin = (data['lastLoginDate'] as Timestamp?)?.toDate();
-      int currentStreak = data['currentStreak'] ?? 0;
-      int longestStreak = data['longestStreak'] ?? 0;
+        if (!userDoc.exists) return;
 
-      if (lastLogin != null) {
+        Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
+        DateTime? lastActiveDate =
+            (userData['lastActiveDate'] as Timestamp?)?.toDate();
+        int currentStreak = userData['currentStreak'] ?? 0;
+        int longestStreak = userData['longestStreak'] ?? 0;
+
         DateTime now = DateTime.now();
         DateTime today = DateTime(now.year, now.month, now.day);
-        DateTime lastLoginDay =
-            DateTime(lastLogin.year, lastLogin.month, lastLogin.day);
 
-        int daysDifference = today.difference(lastLoginDay).inDays;
-
-        if (daysDifference == 1) {
-          // Consecutive day - increase streak
-          currentStreak++;
-          if (currentStreak > longestStreak) {
-            longestStreak = currentStreak;
-          }
-        } else if (daysDifference > 1) {
-          // Streak broken - reset to 1
+        // Initialize streak if this is the first activity
+        if (lastActiveDate == null) {
           currentStreak = 1;
-        }
-        // If daysDifference == 0, user already logged in today, don't update
+          longestStreak = 1;
+        } else {
+          DateTime lastActiveDay = DateTime(
+              lastActiveDate.year, lastActiveDate.month, lastActiveDate.day);
 
-        await _usersCollection.doc(uid).update({
+          int daysDifference = today.difference(lastActiveDay).inDays;
+
+          if (daysDifference == 0) {
+            // Same day - don't update streak
+            AppLogger.info(
+                'User already active today, streak remains: $currentStreak');
+            return;
+          } else if (daysDifference == 1) {
+            // Consecutive day - increase streak
+            currentStreak++;
+            if (currentStreak > longestStreak) {
+              longestStreak = currentStreak;
+            }
+            AppLogger.info('Streak increased to: $currentStreak');
+          } else {
+            // Streak broken - reset to 1
+            AppLogger.info('Streak broken. Was $currentStreak, reset to 1');
+            currentStreak = 1;
+          }
+        }
+
+        // Update both collections
+        transaction.update(_usersCollection.doc(uid), {
           'currentStreak': currentStreak,
           'longestStreak': longestStreak,
+          'lastActiveDate': FieldValue.serverTimestamp(),
         });
-      }
+
+        // Update user_stats if it exists
+        if (statsDoc.exists) {
+          transaction.update(_userStatsCollection.doc(uid), {
+            'currentStreak': currentStreak,
+            'longestStreak': longestStreak,
+            'lastActiveDate': FieldValue.serverTimestamp(),
+            'lastUpdated': FieldValue.serverTimestamp(),
+          });
+        } else {
+          // Create user_stats if it doesn't exist
+          transaction.set(_userStatsCollection.doc(uid), {
+            'totalXP': userData['totalXP'] ?? 0,
+            'level': userData['level'] ?? 1,
+            'currentStreak': currentStreak,
+            'longestStreak': longestStreak,
+            'lessonsCompleted': 0,
+            'quizzesCompleted': 0,
+            'challengesCompleted': 0,
+            'coursesCompleted': userData['completedCourses']?.length ?? 0,
+            'perfectQuizzes': 0,
+            'totalTimeSpent': 0,
+            'lastActiveDate': FieldValue.serverTimestamp(),
+            'xpHistory': {},
+            'dailyXP': {},
+            'lastUpdated': FieldValue.serverTimestamp(),
+          });
+        }
+      });
+
+      AppLogger.info('Streak updated successfully for user: $uid');
     } catch (e) {
       AppLogger.error('Error updating streak: $e', error: e);
     }
   }
 
-  // Add XP to user
+  // Add XP to user - FIXED to sync both collections
   Future<void> addXP(String uid, int xpToAdd) async {
     try {
       await _firestore.runTransaction((transaction) async {
         DocumentSnapshot userDoc =
             await transaction.get(_usersCollection.doc(uid));
+        DocumentSnapshot statsDoc =
+            await transaction.get(_userStatsCollection.doc(uid));
 
         if (!userDoc.exists) {
           throw Exception('User not found');
@@ -264,16 +331,39 @@ class DatabaseService {
         // Calculate new level
         int newLevel = UserModel.calculateLevel(newXP);
 
+        // Update users collection (both totalXP and xp fields)
         transaction.update(_usersCollection.doc(uid), {
           'totalXP': newXP,
+          'xp': newXP, // For backward compatibility
           'level': newLevel,
         });
 
-        // Update stats
-        transaction.update(_userStatsCollection.doc(uid), {
-          'totalXP': FieldValue.increment(xpToAdd),
-          'lastUpdated': FieldValue.serverTimestamp(),
-        });
+        // Update user_stats collection
+        if (statsDoc.exists) {
+          transaction.update(_userStatsCollection.doc(uid), {
+            'totalXP': newXP,
+            'level': newLevel,
+            'lastUpdated': FieldValue.serverTimestamp(),
+          });
+        } else {
+          // Create user_stats if it doesn't exist
+          transaction.set(_userStatsCollection.doc(uid), {
+            'totalXP': newXP,
+            'level': newLevel,
+            'currentStreak': data['currentStreak'] ?? 0,
+            'longestStreak': data['longestStreak'] ?? 0,
+            'lessonsCompleted': 0,
+            'quizzesCompleted': 0,
+            'challengesCompleted': 0,
+            'coursesCompleted': data['completedCourses']?.length ?? 0,
+            'perfectQuizzes': 0,
+            'totalTimeSpent': 0,
+            'lastActiveDate': FieldValue.serverTimestamp(),
+            'xpHistory': {},
+            'dailyXP': {},
+            'lastUpdated': FieldValue.serverTimestamp(),
+          });
+        }
       });
 
       AppLogger.info('Added $xpToAdd XP to user: $uid');
@@ -308,16 +398,16 @@ class DatabaseService {
             'completedLessons': completedLessons,
           });
 
-          // Add XP
-          await addXP(uid, xpReward);
-
           // Update stats
           transaction.update(_userStatsCollection.doc(uid), {
-            'totalLessonsCompleted': FieldValue.increment(1),
+            'lessonsCompleted': FieldValue.increment(1),
             'lastUpdated': FieldValue.serverTimestamp(),
           });
         }
       });
+
+      // Add XP after transaction
+      await addXP(uid, xpReward);
 
       AppLogger.info('Lesson $lessonId marked as completed for user: $uid');
     } catch (e) {
@@ -349,17 +439,17 @@ class DatabaseService {
             'completedQuizzes': completedQuizzes,
           });
 
-          // Add XP based on score
-          int adjustedXP = (xpReward * score / 100).round();
-          await addXP(uid, adjustedXP);
-
           // Update stats
           transaction.update(_userStatsCollection.doc(uid), {
-            'totalQuizzesCompleted': FieldValue.increment(1),
+            'quizzesCompleted': FieldValue.increment(1),
             'lastUpdated': FieldValue.serverTimestamp(),
           });
         }
       });
+
+      // Add XP based on score
+      int adjustedXP = (xpReward * score / 100).round();
+      await addXP(uid, adjustedXP);
 
       AppLogger.info('Quiz $quizId marked as completed for user: $uid');
     } catch (e) {
@@ -861,6 +951,176 @@ class DatabaseService {
     } catch (e) {
       AppLogger.error('Error awarding XP: $e', error: e);
       rethrow;
+    }
+  }
+
+  // ============= COURSE METHODS =============
+
+  // Get all courses
+  Future<List<CourseModel>> getAllCourses() async {
+    try {
+      final snapshot = await _firestore
+          .collection('courses')
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      return snapshot.docs
+          .map((doc) => CourseModel.fromJson({
+                'id': doc.id,
+                ...doc.data(),
+              }))
+          .toList();
+    } catch (e) {
+      AppLogger.error('Error getting all courses: $e', error: e);
+      return [];
+    }
+  }
+
+  // Get courses by language
+  Future<List<CourseModel>> getCoursesByLanguage(String language) async {
+    try {
+      final snapshot = await _firestore
+          .collection('courses')
+          .where('language', isEqualTo: language)
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      return snapshot.docs
+          .map((doc) => CourseModel.fromJson({
+                'id': doc.id,
+                ...doc.data(),
+              }))
+          .toList();
+    } catch (e) {
+      AppLogger.error('Error getting courses by language: $e', error: e);
+      return [];
+    }
+  }
+
+  // Get featured courses
+  Future<List<CourseModel>> getFeaturedCourses() async {
+    try {
+      final snapshot = await _firestore
+          .collection('courses')
+          .where('isFeatured', isEqualTo: true)
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      return snapshot.docs
+          .map((doc) => CourseModel.fromJson({
+                'id': doc.id,
+                ...doc.data(),
+              }))
+          .toList();
+    } catch (e) {
+      AppLogger.error('Error getting featured courses: $e', error: e);
+      return [];
+    }
+  }
+
+  // Get course by ID
+  Future<CourseModel?> getCourseById(String courseId) async {
+    try {
+      final doc = await _firestore.collection('courses').doc(courseId).get();
+
+      if (!doc.exists) return null;
+
+      return CourseModel.fromJson({
+        'id': doc.id,
+        ...doc.data()!,
+      });
+    } catch (e) {
+      AppLogger.error('Error getting course by id: $e', error: e);
+      return null;
+    }
+  }
+
+  // Get course modules
+  Future<List<ModuleModel>> getCourseModules(String courseId) async {
+    try {
+      final snapshot = await _firestore
+          .collection('modules')
+          .where('courseId', isEqualTo: courseId)
+          .orderBy('orderIndex')
+          .get();
+
+      return snapshot.docs
+          .map((doc) => ModuleModel.fromJson({
+                'id': doc.id,
+                ...doc.data(),
+              }))
+          .toList();
+    } catch (e) {
+      AppLogger.error('Error getting course modules: $e', error: e);
+      return [];
+    }
+  }
+
+  // Get module lessons
+  Future<List<LessonModel>> getModuleLessons(String moduleId) async {
+    try {
+      final snapshot = await _firestore
+          .collection('lessons')
+          .where('moduleId', isEqualTo: moduleId)
+          .orderBy('orderIndex')
+          .get();
+
+      return snapshot.docs
+          .map((doc) => LessonModel.fromJson({
+                'id': doc.id,
+                ...doc.data(),
+              }))
+          .toList();
+    } catch (e) {
+      AppLogger.error('Error getting module lessons: $e', error: e);
+      return [];
+    }
+  }
+
+  // Get lesson by ID
+  Future<LessonModel?> getLessonById(String lessonId) async {
+    try {
+      final doc = await _firestore.collection('lessons').doc(lessonId).get();
+
+      if (!doc.exists) return null;
+
+      return LessonModel.fromJson({
+        'id': doc.id,
+        ...doc.data()!,
+      });
+    } catch (e) {
+      AppLogger.error('Error getting lesson by id: $e', error: e);
+      return null;
+    }
+  }
+
+  // SYNC XP DATA - Helper method to fix inconsistencies
+  Future<void> syncUserXP(String uid) async {
+    try {
+      await _firestore.runTransaction((transaction) async {
+        // Get user_stats document (source of truth)
+        DocumentSnapshot statsDoc =
+            await transaction.get(_userStatsCollection.doc(uid));
+
+        if (statsDoc.exists) {
+          Map<String, dynamic> statsData =
+              statsDoc.data() as Map<String, dynamic>;
+          int correctXP = statsData['totalXP'] ?? 0;
+          int correctLevel = statsData['level'] ?? 1;
+
+          // Update users collection to match
+          transaction.update(_usersCollection.doc(uid), {
+            'totalXP': correctXP,
+            'xp': correctXP, // For backward compatibility
+            'level': correctLevel,
+          });
+
+          AppLogger.info(
+              'Synced XP for user $uid: $correctXP XP, Level $correctLevel');
+        }
+      });
+    } catch (e) {
+      AppLogger.error('Error syncing user XP: $e', error: e);
     }
   }
 }
