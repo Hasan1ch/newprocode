@@ -1,14 +1,14 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class Judge0Service {
-  // Using Judge0 public API (you can also host your own instance)
-  static const String _baseUrl = 'https://judge0-ce.p.rapidapi.com';
+  // Base URL from environment variables
+  static String get _baseUrl =>
+      dotenv.env['JUDGE0_BASE_URL'] ?? 'https://judge0-ce.p.rapidapi.com';
 
-  // You need to get your own API key from RapidAPI
-  // https://rapidapi.com/judge0-official/api/judge0-ce
-  static const String _apiKey =
-      '6a7488d9e2msh2d046a8ad2a723bp16d39ajsn7ed3c95e55b4';
+  // API key from environment variables - NO HARDCODED KEY!
+  static String get _apiKey => dotenv.env['JUDGE0_API_KEY'] ?? '';
 
   final Map<String, int> _languageIds = {
     'Python': 71, // Python 3.8.1
@@ -33,6 +33,12 @@ class Judge0Service {
     int memoryLimit = 128000,
   }) async {
     try {
+      // Check if API key is available
+      if (_apiKey.isEmpty) {
+        throw Exception(
+            'Judge0 API key not found. Please check your .env file.');
+      }
+
       // Create submission
       final submissionId = await _createSubmission(
         code: code,

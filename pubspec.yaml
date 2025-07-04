@@ -20,6 +20,9 @@ dependencies:
   # State Management
   provider: ^6.1.1
 
+  # Environment Variables
+  flutter_dotenv: ^5.1.0
+
   # UI/UX
   cupertino_icons: ^1.0.6
   google_fonts: ^6.1.0
@@ -120,6 +123,8 @@ flutter:
     - assets/animations/
     - assets/animations/lottie/
     - assets/fonts/
+    - .env # Add this line to include .env in assets
+
 
   # Comment out fonts section until font files are added
   # fonts:
