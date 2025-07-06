@@ -1,10 +1,13 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:procode/models/user_model.dart';
 import 'package:procode/services/auth_service.dart';
 import 'package:procode/services/database_service.dart';
 import 'package:procode/utils/app_logger.dart';
+import 'package:provider/provider.dart';
+import 'package:procode/providers/user_provider.dart';
+import 'package:procode/providers/course_provider.dart';
 
 // Add AuthStatus enum
 enum AuthStatus {
@@ -314,15 +317,32 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  // Sign out
-  Future<void> signOut() async {
+  // Sign out with proper cleanup
+  Future<void> signOut({BuildContext? context}) async {
     try {
+      // Clear providers data before signing out
+      if (context != null) {
+        // Clear user provider data
+        final userProvider = Provider.of<UserProvider>(context, listen: false);
+        userProvider.clear();
+
+        // Clear course provider data
+        final courseProvider =
+            Provider.of<CourseProvider>(context, listen: false);
+        courseProvider.clearUserData();
+      }
+
+      // Sign out from Firebase
       await _authService.signOut();
       await _googleSignIn.signOut();
+
+      // Clear local data
       _user = null;
       _firebaseUser = null;
       _status = AuthStatus.unauthenticated;
+
       notifyListeners();
+      AppLogger.info('User signed out successfully');
     } catch (e) {
       AppLogger.error('Sign out error', error: e);
     }
@@ -420,9 +440,9 @@ class AuthProvider extends ChangeNotifier {
     );
   }
 
-  // Logout method (wrapper for signOut)
-  Future<void> logout() async {
-    await signOut();
+  // Logout method (wrapper for signOut) - Pass context for cleanup
+  Future<void> logout({BuildContext? context}) async {
+    await signOut(context: context);
   }
 
   // Send email verification (wrapper for resendVerificationEmail)

@@ -58,7 +58,11 @@ class UserProvider extends ChangeNotifier {
             // Load dependent data when user updates
             _loadUserStatsRealtime();
             _loadAchievementsRealtime();
-            _updateStats();
+
+            // Defer stats update to avoid setState during build
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _updateStats();
+            });
 
             notifyListeners();
             AppLogger.info('User data updated in real-time');
@@ -135,7 +139,12 @@ class UserProvider extends ChangeNotifier {
             'uid': _currentUserId!,
             ...snapshot.data()!,
           });
-          _updateStats();
+
+          // Defer stats update to avoid setState during build
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _updateStats();
+          });
+
           notifyListeners();
           AppLogger.info('User stats updated in real-time');
         } else if (_user != null) {
@@ -156,7 +165,12 @@ class UserProvider extends ChangeNotifier {
             xpHistory: {},
             dailyXP: {},
           );
-          _updateStats();
+
+          // Defer stats update to avoid setState during build
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _updateStats();
+          });
+
           notifyListeners();
         }
       },
@@ -257,7 +271,7 @@ class UserProvider extends ChangeNotifier {
     }
   }
 
-  // Update user profile
+  // Update user profile - FIXED VERSION
   Future<void> updateProfile({
     String? displayName,
     String? bio,
@@ -280,20 +294,37 @@ class UserProvider extends ChangeNotifier {
         );
       }
 
-      // Update user model
-      _user = _user!.copyWith(
-        displayName: displayName ?? _user!.displayName,
-        bio: bio ?? _user!.bio,
-        country: country ?? _user!.country,
-        learningGoal: learningGoal ?? _user!.learningGoal,
-        avatarUrl: avatarUrl,
-      );
+      // Prepare update data
+      final updateData = <String, dynamic>{};
 
-      // Save to database
-      await _databaseService.updateUser(_user!.id, _user!.toJson());
+      if (displayName != null && displayName.isNotEmpty) {
+        updateData['displayName'] = displayName;
+      }
+
+      if (bio != null) {
+        updateData['bio'] = bio;
+      }
+
+      if (country != null) {
+        updateData['country'] = country;
+      }
+
+      if (learningGoal != null) {
+        updateData['learningGoal'] = learningGoal;
+      }
+
+      if (avatarUrl != null) {
+        updateData['avatarUrl'] = avatarUrl;
+      }
+
+      // Update in Firestore directly
+      await _databaseService.updateUser(_user!.id, updateData);
+
+      AppLogger.info('Profile updated successfully with data: $updateData');
     } catch (e) {
-      _error = 'Failed to update profile';
+      _error = 'Failed to update profile: ${e.toString()}';
       AppLogger.error('UserProvider.updateProfile: $e');
+      rethrow;
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -322,7 +353,9 @@ class UserProvider extends ChangeNotifier {
         privacySettings: updatedPrivacySettings,
       );
 
-      await _databaseService.updateUser(_user!.id, _user!.toJson());
+      await _databaseService.updateUser(_user!.id, {
+        'privacySettings': updatedPrivacySettings,
+      });
       notifyListeners();
     } catch (e) {
       _error = 'Failed to update privacy settings';
@@ -351,8 +384,9 @@ class UserProvider extends ChangeNotifier {
         featured.add(achievementId);
       }
 
-      _user = _user!.copyWith(featuredAchievements: featured);
-      await _databaseService.updateUser(_user!.id, _user!.toJson());
+      await _databaseService.updateUser(_user!.id, {
+        'featuredAchievements': featured,
+      });
       notifyListeners();
     } catch (e) {
       _error = 'Failed to update featured achievements';

@@ -1,12 +1,15 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:procode/models/leaderboard_entry_model.dart';
 import 'package:procode/services/database_service.dart';
 import 'package:procode/utils/app_logger.dart';
 
-enum LeaderboardFilter { global, weekly, monthly, byCourse }
+enum LeaderboardFilter { global, byCourse }
 
 class LeaderboardProvider extends ChangeNotifier {
   final DatabaseService _databaseService = DatabaseService();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   List<LeaderboardEntry> _entries = [];
   LeaderboardFilter _currentFilter = LeaderboardFilter.global;
@@ -16,6 +19,15 @@ class LeaderboardProvider extends ChangeNotifier {
   int? _userRank;
   LeaderboardEntry? _userEntry;
 
+  // Cache management
+  DateTime? _lastFetchTime;
+  static const Duration _cacheValidDuration = Duration(minutes: 5);
+
+  // Real-time listeners
+  StreamSubscription? _leaderboardSubscription;
+  StreamSubscription? _userSubscription;
+  String? _currentUserId;
+
   List<LeaderboardEntry> get entries => _entries;
   LeaderboardFilter get currentFilter => _currentFilter;
   String? get selectedCourseId => _selectedCourseId;
@@ -24,37 +36,43 @@ class LeaderboardProvider extends ChangeNotifier {
   int? get userRank => _userRank;
   LeaderboardEntry? get userEntry => _userEntry;
 
-  // Load leaderboard data
+  // Check if cache is still valid
+  bool get _isCacheValid {
+    if (_lastFetchTime == null) return false;
+    return DateTime.now().difference(_lastFetchTime!) < _cacheValidDuration;
+  }
+
+  // Load leaderboard data with caching
   Future<void> loadLeaderboard({String? userId}) async {
+    // Store current user ID for real-time updates
+    _currentUserId = userId;
+
+    // Check cache first
+    if (_isCacheValid && _entries.isNotEmpty) {
+      AppLogger.info('Using cached leaderboard data');
+      return;
+    }
+
     try {
       _isLoading = true;
       _error = null;
       notifyListeners();
 
+      // Cancel existing subscriptions
+      await _cancelSubscriptions();
+
       switch (_currentFilter) {
         case LeaderboardFilter.global:
-          _entries = await _databaseService.getGlobalLeaderboard(limit: 100);
-          break;
-        case LeaderboardFilter.weekly:
-          _entries = await _databaseService.getWeeklyLeaderboard(limit: 100);
-          break;
-        case LeaderboardFilter.monthly:
-          _entries = await _databaseService.getMonthlyLeaderboard(limit: 100);
+          await _loadGlobalLeaderboard(userId);
           break;
         case LeaderboardFilter.byCourse:
           if (_selectedCourseId != null) {
-            _entries = await _databaseService.getCourseLeaderboard(
-              courseId: _selectedCourseId!,
-              limit: 100,
-            );
+            await _loadCourseLeaderboard(userId);
           }
           break;
       }
 
-      // Find user's rank if userId provided
-      if (userId != null) {
-        _findUserRank(userId);
-      }
+      _lastFetchTime = DateTime.now();
     } catch (e) {
       _error = 'Failed to load leaderboard';
       AppLogger.error('LeaderboardProvider.loadLeaderboard', error: e);
@@ -64,6 +82,133 @@ class LeaderboardProvider extends ChangeNotifier {
     }
   }
 
+  // Load global leaderboard with real-time listener
+  Future<void> _loadGlobalLeaderboard(String? userId) async {
+    // Initial load
+    _entries = await _databaseService.getGlobalLeaderboard(limit: 100);
+
+    // Find user's rank if userId provided
+    if (userId != null) {
+      _findUserRank(userId);
+    }
+
+    // Set up real-time listener for top 100
+    _leaderboardSubscription = _firestore
+        .collection('users')
+        .where('privacySettings.showOnLeaderboard', isEqualTo: true)
+        .orderBy('totalXP', descending: true)
+        .limit(100)
+        .snapshots()
+        .listen((snapshot) {
+      _handleLeaderboardUpdate(snapshot, userId);
+    });
+
+    // Set up listener for user's own data if not in top 100
+    if (userId != null && _userRank != null && _userRank! > 100) {
+      _userSubscription = _firestore
+          .collection('users')
+          .doc(userId)
+          .snapshots()
+          .listen((snapshot) {
+        _handleUserUpdate(snapshot, userId);
+      });
+    }
+  }
+
+  // Load course leaderboard
+  Future<void> _loadCourseLeaderboard(String? userId) async {
+    if (_selectedCourseId == null) return;
+
+    _entries = await _databaseService.getCourseLeaderboard(
+      courseId: _selectedCourseId!,
+      limit: 100,
+    );
+
+    if (userId != null) {
+      _userRank = await _databaseService.getUserCourseRank(
+        userId: userId,
+        courseId: _selectedCourseId!,
+      );
+      if (_userRank != null && _userRank! > 100) {
+        _userEntry = await _databaseService.getLeaderboardEntry(userId);
+      }
+    }
+  }
+
+  // Handle real-time leaderboard updates
+  void _handleLeaderboardUpdate(QuerySnapshot snapshot, String? userId) {
+    final entries = <LeaderboardEntry>[];
+    int rank = 1;
+
+    for (final doc in snapshot.docs) {
+      final userData = doc.data() as Map<String, dynamic>;
+
+      entries.add(LeaderboardEntry(
+        id: doc.id,
+        userId: doc.id,
+        username: userData['username'] ?? '',
+        displayName: userData['displayName'] ?? userData['username'] ?? '',
+        avatarUrl: userData['avatarUrl'],
+        totalXP: userData['totalXP'] ?? 0,
+        weeklyXP: 0,
+        monthlyXP: 0,
+        level: userData['level'] ?? 1,
+        currentStreak: userData['currentStreak'] ?? 0,
+        completedCourses: (userData['completedCourses'] as List?)?.length ?? 0,
+        rank: rank++,
+        lastActive: userData['lastActiveDate'] != null
+            ? (userData['lastActiveDate'] as Timestamp).toDate()
+            : DateTime.now(),
+        lastUpdated: userData['lastActiveDate'] != null
+            ? (userData['lastActiveDate'] as Timestamp).toDate()
+            : DateTime.now(),
+      ));
+    }
+
+    _entries = entries;
+
+    // Update user rank if they're in the list
+    if (userId != null) {
+      _findUserRank(userId);
+    }
+
+    notifyListeners();
+  }
+
+  // Handle user's own data updates
+  void _handleUserUpdate(DocumentSnapshot snapshot, String userId) async {
+    if (!snapshot.exists) return;
+
+    final userData = snapshot.data() as Map<String, dynamic>;
+
+    // Update user's rank
+    _userRank = await _databaseService.getUserGlobalRank(userId);
+
+    // Update user's entry
+    _userEntry = LeaderboardEntry(
+      id: userId,
+      userId: userId,
+      username: userData['username'] ?? '',
+      displayName: userData['displayName'] ?? userData['username'] ?? '',
+      avatarUrl: userData['avatarUrl'],
+      totalXP: userData['totalXP'] ?? 0,
+      weeklyXP: 0,
+      monthlyXP: 0,
+      level: userData['level'] ?? 1,
+      currentStreak: userData['currentStreak'] ?? 0,
+      completedCourses: (userData['completedCourses'] as List?)?.length ?? 0,
+      rank: _userRank ?? 0,
+      lastActive: userData['lastActiveDate'] != null
+          ? (userData['lastActiveDate'] as Timestamp).toDate()
+          : DateTime.now(),
+      lastUpdated: userData['lastActiveDate'] != null
+          ? (userData['lastActiveDate'] as Timestamp).toDate()
+          : DateTime.now(),
+    );
+
+    notifyListeners();
+  }
+
   // Change filter
   void setFilter(LeaderboardFilter filter, {String? courseId}) {
     if (_currentFilter != filter ||
@@ -71,12 +216,16 @@ class LeaderboardProvider extends ChangeNotifier {
             courseId != _selectedCourseId)) {
       _currentFilter = filter;
       _selectedCourseId = courseId;
-      loadLeaderboard();
+      _lastFetchTime = null; // Invalidate cache
+      loadLeaderboard(userId: _currentUserId);
     }
   }
 
   // Find user's rank in current leaderboard
   void _findUserRank(String userId) {
+    _userRank = null;
+    _userEntry = null;
+
     for (int i = 0; i < _entries.length; i++) {
       if (_entries[i].userId == userId) {
         _userRank = i + 1;
@@ -98,12 +247,6 @@ class LeaderboardProvider extends ChangeNotifier {
         case LeaderboardFilter.global:
           _userRank = await _databaseService.getUserGlobalRank(userId);
           break;
-        case LeaderboardFilter.weekly:
-          _userRank = await _databaseService.getUserWeeklyRank(userId);
-          break;
-        case LeaderboardFilter.monthly:
-          _userRank = await _databaseService.getUserMonthlyRank(userId);
-          break;
         case LeaderboardFilter.byCourse:
           if (_selectedCourseId != null) {
             _userRank = await _databaseService.getUserCourseRank(
@@ -124,17 +267,34 @@ class LeaderboardProvider extends ChangeNotifier {
     }
   }
 
-  // Refresh leaderboard
+  // Refresh leaderboard (force reload, ignore cache)
   Future<void> refresh({String? userId}) async {
+    _lastFetchTime = null; // Invalidate cache
     await loadLeaderboard(userId: userId);
   }
 
-  // Clear data
+  // Clear data and cancel subscriptions
   void clear() {
     _entries = [];
     _userRank = null;
     _userEntry = null;
     _error = null;
+    _lastFetchTime = null;
+    _cancelSubscriptions();
     notifyListeners();
+  }
+
+  // Cancel all active subscriptions
+  Future<void> _cancelSubscriptions() async {
+    await _leaderboardSubscription?.cancel();
+    await _userSubscription?.cancel();
+    _leaderboardSubscription = null;
+    _userSubscription = null;
+  }
+
+  @override
+  void dispose() {
+    _cancelSubscriptions();
+    super.dispose();
   }
 }

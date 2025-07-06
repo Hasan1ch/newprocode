@@ -18,6 +18,28 @@ class ContinueLearningCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Calculate actual values from progress
+    final lessonsCompleted = progress?.completedLessons.length ?? 0;
+    final xpEarned = progress?.totalXpEarned ?? 0;
+    final currentModule = progress?.currentModuleId ?? '';
+    final moduleNumber =
+        currentModule.isNotEmpty ? currentModule.split('_').last : '1';
+
+    // Format last accessed time
+    String lastAccessedText = 'Not started';
+    if (progress?.lastAccessedAt != null) {
+      final difference = DateTime.now().difference(progress!.lastAccessedAt);
+      if (difference.inMinutes < 60) {
+        lastAccessedText = '${difference.inMinutes}m ago';
+      } else if (difference.inHours < 24) {
+        lastAccessedText = '${difference.inHours}h ago';
+      } else if (difference.inDays == 1) {
+        lastAccessedText = 'Yesterday';
+      } else {
+        lastAccessedText = '${difference.inDays}d ago';
+      }
+    }
+
     return InkWell(
       onTap: () {
         Navigator.push(
@@ -40,25 +62,29 @@ class ContinueLearningCard extends StatelessWidget {
         ),
         child: Row(
           children: [
+            // Course Icon
             Container(
               width: 60,
               height: 60,
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.2),
+                color: _getCourseColor(course.language).withOpacity(0.2),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Center(
                 child: Text(
-                  course.language.substring(0, 2).toUpperCase(),
+                  course.icon.isNotEmpty
+                      ? course.icon
+                      : course.language.substring(0, 2).toUpperCase(),
                   style: TextStyle(
-                    color: AppColors.primary,
-                    fontSize: 20,
+                    color: _getCourseColor(course.language),
+                    fontSize: course.icon.isNotEmpty ? 24 : 20,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
             ),
             const SizedBox(width: 16),
+            // Course Details
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -70,42 +96,103 @@ class ContinueLearningCard extends StatelessWidget {
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    'Module ${(progress?.currentModuleId ?? '1').split('_').last}',
-                    style: TextStyle(
-                      color: Colors.grey[400],
-                      fontSize: 14,
-                    ),
+                  Row(
+                    children: [
+                      if (currentModule.isNotEmpty) ...[
+                        Text(
+                          'Module $moduleNumber',
+                          style: TextStyle(
+                            color: Colors.grey[400],
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '•',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                      Text(
+                        lastAccessedText,
+                        style: TextStyle(
+                          color: Colors.grey[400],
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 8),
+                  // Progress Bar
                   ClipRRect(
                     borderRadius: BorderRadius.circular(4),
                     child: LinearProgressIndicator(
                       value: completionPercentage / 100,
                       backgroundColor: Colors.grey[800],
-                      valueColor:
-                          AlwaysStoppedAnimation<Color>(AppColors.primary),
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        _getCourseColor(course.language),
+                      ),
                       minHeight: 6,
                     ),
+                  ),
+                  const SizedBox(height: 4),
+                  // Stats Row
+                  Row(
+                    children: [
+                      Text(
+                        '$lessonsCompleted lessons',
+                        style: TextStyle(
+                          color: Colors.grey[500],
+                          fontSize: 12,
+                        ),
+                      ),
+                      if (xpEarned > 0) ...[
+                        const SizedBox(width: 8),
+                        Text(
+                          '•',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '$xpEarned XP',
+                          style: TextStyle(
+                            color: Colors.amber[600],
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),
             ),
             const SizedBox(width: 16),
+            // Completion Percentage
             Column(
               children: [
                 Text(
                   '${completionPercentage.toInt()}%',
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: completionPercentage >= 100
+                        ? Colors.green
+                        : Colors.white,
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 Text(
-                  'Complete',
+                  completionPercentage >= 100 ? 'Completed' : 'Complete',
                   style: TextStyle(
                     color: Colors.grey[400],
                     fontSize: 12,
@@ -117,5 +204,27 @@ class ContinueLearningCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Color _getCourseColor(String language) {
+    switch (language.toLowerCase()) {
+      case 'python':
+        return Colors.blue;
+      case 'javascript':
+        return Colors.amber;
+      case 'java':
+        return Colors.orange;
+      case 'html':
+      case 'css':
+      case 'html_css':
+        return Colors.deepOrange;
+      case 'cpp':
+      case 'c++':
+        return Colors.indigo;
+      case 'dart':
+        return Colors.lightBlue;
+      default:
+        return AppColors.primary;
+    }
   }
 }

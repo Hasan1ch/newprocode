@@ -10,6 +10,7 @@ import 'package:procode/models/user_stats_model.dart';
 import 'package:procode/models/course_model.dart';
 import 'package:procode/models/module_model.dart';
 import 'package:procode/models/lesson_model.dart';
+import 'package:procode/config/firebase_config.dart';
 
 class DatabaseService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -26,7 +27,18 @@ class DatabaseService {
   // Create new user
   Future<void> createUser(UserModel user) async {
     try {
-      await _usersCollection.doc(user.id).set(user.toFirestore());
+      // Ensure user has privacy settings
+      final userDataWithPrivacy = user.toFirestore();
+      if (!userDataWithPrivacy.containsKey('privacySettings') ||
+          userDataWithPrivacy['privacySettings'] == null) {
+        userDataWithPrivacy['privacySettings'] = {
+          'showEmail': false,
+          'showProgress': true,
+          'showOnLeaderboard': true,
+        };
+      }
+
+      await _usersCollection.doc(user.id).set(userDataWithPrivacy);
 
       // Create user stats document with same XP values
       await _userStatsCollection.doc(user.id).set({
@@ -311,7 +323,7 @@ class DatabaseService {
     }
   }
 
-  // Add XP to user - FIXED to sync both collections
+  // FIXED addXP method to properly update both collections
   Future<void> addXP(String uid, int xpToAdd) async {
     try {
       await _firestore.runTransaction((transaction) async {
@@ -328,21 +340,32 @@ class DatabaseService {
         int currentXP = data['totalXP'] ?? 0;
         int newXP = currentXP + xpToAdd;
 
-        // Calculate new level
-        int newLevel = UserModel.calculateLevel(newXP);
+        // Calculate new level using FirebaseConfig
+        int newLevel = FirebaseConfig.calculateLevel(newXP);
 
-        // Update users collection (both totalXP and xp fields)
+        // Update users collection
         transaction.update(_usersCollection.doc(uid), {
           'totalXP': newXP,
           'xp': newXP, // For backward compatibility
           'level': newLevel,
+          'lastActiveDate': FieldValue.serverTimestamp(),
         });
 
-        // Update user_stats collection
+        // Update user_stats collection with daily XP tracking
+        final today = DateTime.now();
+        final dateKey =
+            '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+
         if (statsDoc.exists) {
+          final statsData = statsDoc.data() as Map<String, dynamic>;
+          final dailyXP = Map<String, dynamic>.from(statsData['dailyXP'] ?? {});
+          dailyXP[dateKey] = (dailyXP[dateKey] ?? 0) + xpToAdd;
+
           transaction.update(_userStatsCollection.doc(uid), {
             'totalXP': newXP,
             'level': newLevel,
+            'dailyXP': dailyXP,
+            'lastActiveDate': FieldValue.serverTimestamp(),
             'lastUpdated': FieldValue.serverTimestamp(),
           });
         } else {
@@ -360,7 +383,7 @@ class DatabaseService {
             'totalTimeSpent': 0,
             'lastActiveDate': FieldValue.serverTimestamp(),
             'xpHistory': {},
-            'dailyXP': {},
+            'dailyXP': {dateKey: xpToAdd},
             'lastUpdated': FieldValue.serverTimestamp(),
           });
         }
@@ -375,7 +398,7 @@ class DatabaseService {
 
   // Progress tracking
 
-  // Mark lesson as completed
+  // Mark lesson as completed - FIXED to use addXP
   Future<void> markLessonCompleted(
       String uid, String lessonId, int xpReward) async {
     try {
@@ -416,7 +439,7 @@ class DatabaseService {
     }
   }
 
-  // Mark quiz as completed
+  // Mark quiz as completed - FIXED to use addXP
   Future<void> markQuizCompleted(
       String uid, String quizId, int score, int xpReward) async {
     try {
@@ -440,10 +463,17 @@ class DatabaseService {
           });
 
           // Update stats
-          transaction.update(_userStatsCollection.doc(uid), {
+          final updates = {
             'quizzesCompleted': FieldValue.increment(1),
             'lastUpdated': FieldValue.serverTimestamp(),
-          });
+          };
+
+          // Track perfect quizzes
+          if (score == 100) {
+            updates['perfectQuizzes'] = FieldValue.increment(1);
+          }
+
+          transaction.update(_userStatsCollection.doc(uid), updates);
         }
       });
 
@@ -508,81 +538,248 @@ class DatabaseService {
     }
   }
 
-  // ============= LEADERBOARD METHODS =============
+  // ============= UPDATED LEADERBOARD METHODS WITH REAL DATA =============
 
-  // Get global leaderboard
+  // Get global leaderboard with real user data
   Future<List<LeaderboardEntry>> getGlobalLeaderboard(
       {required int limit}) async {
     try {
-      final snapshot = await _firestore
-          .collection('leaderboard')
+      AppLogger.info('Fetching global leaderboard...');
+
+      // Query users collection directly WITHOUT privacy filter first
+      // We'll check privacy settings individually
+      final snapshot = await _usersCollection
           .orderBy('totalXP', descending: true)
-          .limit(limit)
+          .limit(limit * 2) // Get more to account for privacy filtering
           .get();
 
-      return snapshot.docs
-          .map((doc) => LeaderboardEntry.fromJson({
-                'id': doc.id,
-                ...doc.data(),
-              }))
-          .toList();
+      AppLogger.info('Found ${snapshot.docs.length} users in database');
+
+      final entries = <LeaderboardEntry>[];
+      int rank = 1;
+
+      for (final doc in snapshot.docs) {
+        final userData = doc.data() as Map<String, dynamic>;
+
+        // Log user data for debugging
+        AppLogger.info(
+            'Processing user: ${userData['username']}, XP: ${userData['totalXP']}');
+
+        // Check privacy settings - default to true if not set
+        final privacySettings =
+            Map<String, dynamic>.from(userData['privacySettings'] ?? {});
+        final showOnLeaderboard = privacySettings['showOnLeaderboard'] ?? true;
+
+        if (showOnLeaderboard) {
+          entries.add(LeaderboardEntry(
+            id: doc.id,
+            userId: doc.id,
+            username: userData['username'] ?? '',
+            displayName: userData['displayName'] ?? userData['username'] ?? '',
+            avatarUrl: userData['avatarUrl'],
+            totalXP: userData['totalXP'] ?? 0,
+            weeklyXP: 0, // Will be calculated separately
+            monthlyXP: 0, // Will be calculated separately
+            level: userData['level'] ?? 1,
+            currentStreak: userData['currentStreak'] ?? 0,
+            completedCourses:
+                (userData['completedCourses'] as List?)?.length ?? 0,
+            rank: rank++,
+            lastActive: userData['lastActiveDate'] != null
+                ? (userData['lastActiveDate'] as Timestamp).toDate()
+                : DateTime.now(),
+            lastUpdated: userData['lastActiveDate'] != null
+                ? (userData['lastActiveDate'] as Timestamp).toDate()
+                : DateTime.now(),
+          ));
+
+          if (entries.length >= limit) break;
+        }
+      }
+
+      AppLogger.info('Returning ${entries.length} leaderboard entries');
+      return entries;
     } catch (e) {
       AppLogger.error('Error getting global leaderboard: $e', error: e);
       return [];
     }
   }
 
-  // Get weekly leaderboard
+  // Get weekly leaderboard with calculated weekly XP
   Future<List<LeaderboardEntry>> getWeeklyLeaderboard(
       {required int limit}) async {
     try {
-      final weekAgo = DateTime.now().subtract(Duration(days: 7));
-      final snapshot = await _firestore
-          .collection('leaderboard')
-          .where('lastUpdated', isGreaterThan: Timestamp.fromDate(weekAgo))
-          .orderBy('lastUpdated', descending: false)
-          .orderBy('weeklyXP', descending: true)
-          .limit(limit)
+      AppLogger.info('Fetching weekly leaderboard...');
+
+      final weekAgo = DateTime.now().subtract(const Duration(days: 7));
+
+      // Get all users, we'll filter by activity
+      final snapshot = await _usersCollection
+          .orderBy('lastActiveDate', descending: true)
           .get();
 
-      return snapshot.docs
-          .map((doc) => LeaderboardEntry.fromJson({
-                'id': doc.id,
-                ...doc.data(),
-              }))
-          .toList();
+      final entries = <LeaderboardEntry>[];
+
+      for (final doc in snapshot.docs) {
+        final userData = doc.data() as Map<String, dynamic>;
+
+        // Check if user was active in the last week
+        final lastActive = userData['lastActiveDate'] != null
+            ? (userData['lastActiveDate'] as Timestamp).toDate()
+            : null;
+
+        if (lastActive == null || lastActive.isBefore(weekAgo)) continue;
+
+        // Check privacy settings
+        final privacySettings =
+            Map<String, dynamic>.from(userData['privacySettings'] ?? {});
+        final showOnLeaderboard = privacySettings['showOnLeaderboard'] ?? true;
+
+        if (!showOnLeaderboard) continue;
+
+        // Get user stats for weekly XP calculation
+        final statsDoc = await _userStatsCollection.doc(doc.id).get();
+        int weeklyXP = 0;
+
+        if (statsDoc.exists) {
+          final statsData = statsDoc.data() as Map<String, dynamic>;
+          final dailyXP = Map<String, dynamic>.from(statsData['dailyXP'] ?? {});
+
+          // Calculate weekly XP from dailyXP map
+          for (int i = 0; i < 7; i++) {
+            final date = DateTime.now().subtract(Duration(days: i));
+            final dateKey =
+                '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+            final xp = dailyXP[dateKey];
+            if (xp != null) {
+              weeklyXP += (xp as num).toInt();
+            }
+          }
+        }
+
+        if (weeklyXP > 0) {
+          entries.add(LeaderboardEntry(
+            id: doc.id,
+            userId: doc.id,
+            username: userData['username'] ?? '',
+            displayName: userData['displayName'] ?? userData['username'] ?? '',
+            avatarUrl: userData['avatarUrl'],
+            totalXP: userData['totalXP'] ?? 0,
+            weeklyXP: weeklyXP,
+            monthlyXP: 0,
+            level: userData['level'] ?? 1,
+            currentStreak: userData['currentStreak'] ?? 0,
+            completedCourses:
+                (userData['completedCourses'] as List?)?.length ?? 0,
+            rank: 0, // Will be set after sorting
+            lastActive: lastActive,
+            lastUpdated: lastActive,
+          ));
+        }
+      }
+
+      // Sort by weekly XP and assign ranks
+      entries.sort((a, b) => b.weeklyXP.compareTo(a.weeklyXP));
+      for (int i = 0; i < entries.length && i < limit; i++) {
+        entries[i] = entries[i].copyWith(rank: i + 1);
+      }
+
+      AppLogger.info('Returning ${entries.length} weekly leaderboard entries');
+      return entries.take(limit).toList();
     } catch (e) {
       AppLogger.error('Error getting weekly leaderboard: $e', error: e);
       return [];
     }
   }
 
-  // Get monthly leaderboard
+  // Get monthly leaderboard with calculated monthly XP
   Future<List<LeaderboardEntry>> getMonthlyLeaderboard(
       {required int limit}) async {
     try {
-      final monthAgo = DateTime.now().subtract(Duration(days: 30));
-      final snapshot = await _firestore
-          .collection('leaderboard')
-          .where('lastUpdated', isGreaterThan: Timestamp.fromDate(monthAgo))
-          .orderBy('lastUpdated', descending: false)
-          .orderBy('monthlyXP', descending: true)
-          .limit(limit)
+      AppLogger.info('Fetching monthly leaderboard...');
+
+      final monthAgo = DateTime.now().subtract(const Duration(days: 30));
+
+      // Get all users, we'll filter by activity
+      final snapshot = await _usersCollection
+          .orderBy('lastActiveDate', descending: true)
           .get();
 
-      return snapshot.docs
-          .map((doc) => LeaderboardEntry.fromJson({
-                'id': doc.id,
-                ...doc.data(),
-              }))
-          .toList();
+      final entries = <LeaderboardEntry>[];
+
+      for (final doc in snapshot.docs) {
+        final userData = doc.data() as Map<String, dynamic>;
+
+        // Check if user was active in the last month
+        final lastActive = userData['lastActiveDate'] != null
+            ? (userData['lastActiveDate'] as Timestamp).toDate()
+            : null;
+
+        if (lastActive == null || lastActive.isBefore(monthAgo)) continue;
+
+        // Check privacy settings
+        final privacySettings =
+            Map<String, dynamic>.from(userData['privacySettings'] ?? {});
+        final showOnLeaderboard = privacySettings['showOnLeaderboard'] ?? true;
+
+        if (!showOnLeaderboard) continue;
+
+        // Get user stats for monthly XP calculation
+        final statsDoc = await _userStatsCollection.doc(doc.id).get();
+        int monthlyXP = 0;
+
+        if (statsDoc.exists) {
+          final statsData = statsDoc.data() as Map<String, dynamic>;
+          final dailyXP = Map<String, dynamic>.from(statsData['dailyXP'] ?? {});
+
+          // Calculate monthly XP from dailyXP map
+          for (int i = 0; i < 30; i++) {
+            final date = DateTime.now().subtract(Duration(days: i));
+            final dateKey =
+                '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+            final xp = dailyXP[dateKey];
+            if (xp != null) {
+              monthlyXP += (xp as num).toInt();
+            }
+          }
+        }
+
+        if (monthlyXP > 0) {
+          entries.add(LeaderboardEntry(
+            id: doc.id,
+            userId: doc.id,
+            username: userData['username'] ?? '',
+            displayName: userData['displayName'] ?? userData['username'] ?? '',
+            avatarUrl: userData['avatarUrl'],
+            totalXP: userData['totalXP'] ?? 0,
+            weeklyXP: 0,
+            monthlyXP: monthlyXP,
+            level: userData['level'] ?? 1,
+            currentStreak: userData['currentStreak'] ?? 0,
+            completedCourses:
+                (userData['completedCourses'] as List?)?.length ?? 0,
+            rank: 0, // Will be set after sorting
+            lastActive: lastActive,
+            lastUpdated: lastActive,
+          ));
+        }
+      }
+
+      // Sort by monthly XP and assign ranks
+      entries.sort((a, b) => b.monthlyXP.compareTo(a.monthlyXP));
+      for (int i = 0; i < entries.length && i < limit; i++) {
+        entries[i] = entries[i].copyWith(rank: i + 1);
+      }
+
+      AppLogger.info('Returning ${entries.length} monthly leaderboard entries');
+      return entries.take(limit).toList();
     } catch (e) {
       AppLogger.error('Error getting monthly leaderboard: $e', error: e);
       return [];
     }
   }
 
-  // Get course leaderboard
+  // Get course leaderboard - unchanged but with privacy check
   Future<List<LeaderboardEntry>> getCourseLeaderboard({
     required String courseId,
     required int limit,
@@ -593,7 +790,7 @@ class DatabaseService {
           .collection('progress')
           .where('courseId', isEqualTo: courseId)
           .orderBy('totalXpEarned', descending: true)
-          .limit(limit)
+          .limit(limit * 2) // Get more to filter out privacy settings
           .get();
 
       final leaderboardEntries = <LeaderboardEntry>[];
@@ -607,17 +804,35 @@ class DatabaseService {
         if (userDoc.exists) {
           final userData = userDoc.data() as Map<String, dynamic>;
 
-          leaderboardEntries.add(LeaderboardEntry.fromJson({
-            'id': userId,
-            'userId': userId,
-            'username': userData['username'] ?? '',
-            'displayName': userData['displayName'] ?? '',
-            'avatarUrl': userData['avatarUrl'],
-            'totalXP': progressData['totalXpEarned'] ?? 0,
-            'level': userData['level'] ?? 1,
-            'currentStreak': userData['currentStreak'] ?? 0,
-            'rank': leaderboardEntries.length + 1,
-          }));
+          // Check privacy settings
+          final privacySettings =
+              Map<String, dynamic>.from(userData['privacySettings'] ?? {});
+          if (privacySettings['showOnLeaderboard'] != false) {
+            leaderboardEntries.add(LeaderboardEntry(
+              id: userId,
+              userId: userId,
+              username: userData['username'] ?? '',
+              displayName:
+                  userData['displayName'] ?? userData['username'] ?? '',
+              avatarUrl: userData['avatarUrl'],
+              totalXP: progressData['totalXpEarned'] ?? 0,
+              weeklyXP: 0,
+              monthlyXP: 0,
+              level: userData['level'] ?? 1,
+              currentStreak: userData['currentStreak'] ?? 0,
+              completedCourses:
+                  (userData['completedCourses'] as List?)?.length ?? 0,
+              rank: leaderboardEntries.length + 1,
+              lastActive: userData['lastActiveDate'] != null
+                  ? (userData['lastActiveDate'] as Timestamp).toDate()
+                  : DateTime.now(),
+              lastUpdated: userData['lastActiveDate'] != null
+                  ? (userData['lastActiveDate'] as Timestamp).toDate()
+                  : DateTime.now(),
+            ));
+
+            if (leaderboardEntries.length >= limit) break;
+          }
         }
       }
 
@@ -628,7 +843,7 @@ class DatabaseService {
     }
   }
 
-  // Get user global rank
+  // Get user global rank with privacy check
   Future<int?> getUserGlobalRank(String userId) async {
     try {
       final userDoc = await _usersCollection.doc(userId).get();
@@ -638,12 +853,23 @@ class DatabaseService {
       final userData = userDoc.data() as Map<String, dynamic>;
       final userXP = userData['totalXP'] ?? 0;
 
-      final higherRanked = await _usersCollection
-          .where('totalXP', isGreaterThan: userXP)
-          .count()
-          .get();
+      // Count users with higher XP (considering privacy settings)
+      final allUsers =
+          await _usersCollection.where('totalXP', isGreaterThan: userXP).get();
 
-      return (higherRanked.count ?? 0) + 1;
+      int rank = 1;
+      for (final doc in allUsers.docs) {
+        final otherUserData = doc.data() as Map<String, dynamic>;
+        final privacySettings =
+            Map<String, dynamic>.from(otherUserData['privacySettings'] ?? {});
+        final showOnLeaderboard = privacySettings['showOnLeaderboard'] ?? true;
+
+        if (showOnLeaderboard) {
+          rank++;
+        }
+      }
+
+      return rank;
     } catch (e) {
       AppLogger.error('Error getting user global rank: $e', error: e);
       return null;
@@ -653,20 +879,28 @@ class DatabaseService {
   // Get user weekly rank
   Future<int?> getUserWeeklyRank(String userId) async {
     try {
-      // Simplified implementation - you may want to track weekly XP separately
-      final weekAgo = DateTime.now().subtract(Duration(days: 7));
-      final userDoc = await _usersCollection.doc(userId).get();
+      final weekAgo = DateTime.now().subtract(const Duration(days: 7));
 
-      if (!userDoc.exists) return null;
+      // Get user's weekly XP
+      final statsDoc = await _userStatsCollection.doc(userId).get();
+      if (!statsDoc.exists) return null;
 
-      final userData = userDoc.data() as Map<String, dynamic>;
-      final lastActive = (userData['lastActiveDate'] as Timestamp?)?.toDate();
+      final statsData = statsDoc.data() as Map<String, dynamic>;
+      final dailyXP = Map<String, int>.from(statsData['dailyXP'] ?? {});
 
-      if (lastActive == null || lastActive.isBefore(weekAgo)) {
-        return null;
+      int userWeeklyXP = 0;
+      for (int i = 0; i < 7; i++) {
+        final date = DateTime.now().subtract(Duration(days: i));
+        final dateKey =
+            '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+        userWeeklyXP += dailyXP[dateKey] ?? 0;
       }
 
-      return await getUserGlobalRank(userId); // Simplified for now
+      if (userWeeklyXP == 0) return null;
+
+      // For simplicity, return global rank for now
+      // You can implement proper weekly rank calculation if needed
+      return await getUserGlobalRank(userId);
     } catch (e) {
       AppLogger.error('Error getting user weekly rank: $e', error: e);
       return null;
@@ -676,20 +910,28 @@ class DatabaseService {
   // Get user monthly rank
   Future<int?> getUserMonthlyRank(String userId) async {
     try {
-      // Simplified implementation
-      final monthAgo = DateTime.now().subtract(Duration(days: 30));
-      final userDoc = await _usersCollection.doc(userId).get();
+      final monthAgo = DateTime.now().subtract(const Duration(days: 30));
 
-      if (!userDoc.exists) return null;
+      // Get user's monthly XP
+      final statsDoc = await _userStatsCollection.doc(userId).get();
+      if (!statsDoc.exists) return null;
 
-      final userData = userDoc.data() as Map<String, dynamic>;
-      final lastActive = (userData['lastActiveDate'] as Timestamp?)?.toDate();
+      final statsData = statsDoc.data() as Map<String, dynamic>;
+      final dailyXP = Map<String, int>.from(statsData['dailyXP'] ?? {});
 
-      if (lastActive == null || lastActive.isBefore(monthAgo)) {
-        return null;
+      int userMonthlyXP = 0;
+      for (int i = 0; i < 30; i++) {
+        final date = DateTime.now().subtract(Duration(days: i));
+        final dateKey =
+            '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+        userMonthlyXP += dailyXP[dateKey] ?? 0;
       }
 
-      return await getUserGlobalRank(userId); // Simplified for now
+      if (userMonthlyXP == 0) return null;
+
+      // For simplicity, return global rank for now
+      // You can implement proper monthly rank calculation if needed
+      return await getUserGlobalRank(userId);
     } catch (e) {
       AppLogger.error('Error getting user monthly rank: $e', error: e);
       return null;
@@ -727,7 +969,7 @@ class DatabaseService {
     }
   }
 
-  // Get leaderboard entry
+  // Get leaderboard entry for a specific user
   Future<LeaderboardEntry?> getLeaderboardEntry(String userId) async {
     try {
       final userDoc = await _usersCollection.doc(userId).get();
@@ -735,22 +977,93 @@ class DatabaseService {
       if (!userDoc.exists) return null;
 
       final userData = userDoc.data() as Map<String, dynamic>;
+
+      // Get user stats for weekly/monthly XP
+      final statsDoc = await _userStatsCollection.doc(userId).get();
+      int weeklyXP = 0;
+      int monthlyXP = 0;
+
+      if (statsDoc.exists) {
+        final statsData = statsDoc.data() as Map<String, dynamic>;
+        final dailyXP = Map<String, int>.from(statsData['dailyXP'] ?? {});
+
+        // Calculate weekly and monthly XP
+        for (int i = 0; i < 30; i++) {
+          final date = DateTime.now().subtract(Duration(days: i));
+          final dateKey =
+              '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+          final dayXP = dailyXP[dateKey] ?? 0;
+
+          if (i < 7) weeklyXP += dayXP;
+          monthlyXP += dayXP;
+        }
+      }
+
       final rank = await getUserGlobalRank(userId) ?? 0;
 
-      return LeaderboardEntry.fromJson({
-        'id': userId,
-        'userId': userId,
-        'username': userData['username'] ?? '',
-        'displayName': userData['displayName'] ?? '',
-        'avatarUrl': userData['avatarUrl'],
-        'totalXP': userData['totalXP'] ?? 0,
-        'level': userData['level'] ?? 1,
-        'currentStreak': userData['currentStreak'] ?? 0,
-        'rank': rank ?? 0,
-      });
+      return LeaderboardEntry(
+        id: userId,
+        userId: userId,
+        username: userData['username'] ?? '',
+        displayName: userData['displayName'] ?? userData['username'] ?? '',
+        avatarUrl: userData['avatarUrl'],
+        totalXP: userData['totalXP'] ?? 0,
+        weeklyXP: weeklyXP,
+        monthlyXP: monthlyXP,
+        level: userData['level'] ?? 1,
+        currentStreak: userData['currentStreak'] ?? 0,
+        completedCourses: (userData['completedCourses'] as List?)?.length ?? 0,
+        rank: rank,
+        lastActive: userData['lastActiveDate'] != null
+            ? (userData['lastActiveDate'] as Timestamp).toDate()
+            : DateTime.now(),
+        lastUpdated: userData['lastActiveDate'] != null
+            ? (userData['lastActiveDate'] as Timestamp).toDate()
+            : DateTime.now(),
+      );
     } catch (e) {
       AppLogger.error('Error getting leaderboard entry: $e', error: e);
       return null;
+    }
+  }
+
+  // Migration method to ensure all users have privacy settings
+  Future<void> migrateUserPrivacySettings() async {
+    try {
+      final batch = _firestore.batch();
+      final snapshot = await _usersCollection.get();
+
+      int updateCount = 0;
+
+      for (final doc in snapshot.docs) {
+        final userData = doc.data() as Map<String, dynamic>;
+
+        // Check if privacySettings exists
+        if (!userData.containsKey('privacySettings') ||
+            userData['privacySettings'] == null ||
+            (userData['privacySettings'] as Map).isEmpty) {
+          // Add default privacy settings
+          batch.update(doc.reference, {
+            'privacySettings': {
+              'showEmail': false,
+              'showProgress': true,
+              'showOnLeaderboard': true,
+            }
+          });
+
+          updateCount++;
+        }
+      }
+
+      if (updateCount > 0) {
+        await batch.commit();
+        AppLogger.info('Updated privacy settings for $updateCount users');
+      } else {
+        AppLogger.info('All users already have privacy settings');
+      }
+    } catch (e) {
+      AppLogger.error('Error migrating privacy settings: $e', error: e);
+      rethrow;
     }
   }
 
@@ -1094,6 +1407,210 @@ class DatabaseService {
     }
   }
 
+  // ============= PROGRESS TRACKING METHODS =============
+
+  // Create or update course progress
+  Future<void> createOrUpdateProgress({
+    required String userId,
+    required String courseId,
+    required Map<String, dynamic> progressData,
+  }) async {
+    try {
+      // Check if progress already exists
+      final existingProgress = await _firestore
+          .collection('progress')
+          .where('userId', isEqualTo: userId)
+          .where('courseId', isEqualTo: courseId)
+          .limit(1)
+          .get();
+
+      if (existingProgress.docs.isNotEmpty) {
+        // Update existing progress
+        await _firestore
+            .collection('progress')
+            .doc(existingProgress.docs.first.id)
+            .update({
+          ...progressData,
+          'lastUpdated': FieldValue.serverTimestamp(),
+        });
+
+        AppLogger.info('Updated progress for user $userId in course $courseId');
+      } else {
+        // Create new progress
+        await _firestore.collection('progress').add({
+          'userId': userId,
+          'courseId': courseId,
+          ...progressData,
+          'createdAt': FieldValue.serverTimestamp(),
+          'lastUpdated': FieldValue.serverTimestamp(),
+        });
+
+        AppLogger.info(
+            'Created new progress for user $userId in course $courseId');
+      }
+    } catch (e) {
+      AppLogger.error('Error creating/updating progress: $e', error: e);
+      rethrow;
+    }
+  }
+
+  // Get user's progress for a specific course
+  Future<Map<String, dynamic>?> getUserCourseProgress({
+    required String userId,
+    required String courseId,
+  }) async {
+    try {
+      final progressSnapshot = await _firestore
+          .collection('progress')
+          .where('userId', isEqualTo: userId)
+          .where('courseId', isEqualTo: courseId)
+          .limit(1)
+          .get();
+
+      if (progressSnapshot.docs.isEmpty) {
+        return null;
+      }
+
+      return {
+        'id': progressSnapshot.docs.first.id,
+        ...progressSnapshot.docs.first.data(),
+      };
+    } catch (e) {
+      AppLogger.error('Error getting user course progress: $e', error: e);
+      return null;
+    }
+  }
+
+  // Get all progress for a user
+  Future<List<Map<String, dynamic>>> getUserAllProgress({
+    required String userId,
+  }) async {
+    try {
+      final progressSnapshot = await _firestore
+          .collection('progress')
+          .where('userId', isEqualTo: userId)
+          .get();
+
+      return progressSnapshot.docs
+          .map((doc) => {
+                'id': doc.id,
+                ...doc.data(),
+              })
+          .toList();
+    } catch (e) {
+      AppLogger.error('Error getting user progress: $e', error: e);
+      return [];
+    }
+  }
+
+  // Delete user's progress for a course
+  Future<void> deleteUserCourseProgress({
+    required String userId,
+    required String courseId,
+  }) async {
+    try {
+      final progressSnapshot = await _firestore
+          .collection('progress')
+          .where('userId', isEqualTo: userId)
+          .where('courseId', isEqualTo: courseId)
+          .get();
+
+      final batch = _firestore.batch();
+
+      for (final doc in progressSnapshot.docs) {
+        batch.delete(doc.reference);
+      }
+
+      await batch.commit();
+
+      AppLogger.info('Deleted progress for user $userId in course $courseId');
+    } catch (e) {
+      AppLogger.error('Error deleting user course progress: $e', error: e);
+      rethrow;
+    }
+  }
+
+  // Fix progress completion percentage
+  Future<void> recalculateProgressPercentage({
+    required String userId,
+    required String courseId,
+  }) async {
+    try {
+      // Get progress document
+      final progressSnapshot = await _firestore
+          .collection('progress')
+          .where('userId', isEqualTo: userId)
+          .where('courseId', isEqualTo: courseId)
+          .limit(1)
+          .get();
+
+      if (progressSnapshot.docs.isEmpty) {
+        AppLogger.warning(
+            'No progress found for user $userId in course $courseId');
+        return;
+      }
+
+      final progressDoc = progressSnapshot.docs.first;
+      final progressData = progressDoc.data();
+
+      // Get all modules for the course
+      final modules = await getCourseModules(courseId);
+
+      // Calculate total lessons
+      int totalLessons = 0;
+      for (final module in modules) {
+        totalLessons += module.lessonIds.length;
+      }
+
+      // Get completed lessons count
+      final completedLessons =
+          List<String>.from(progressData['completedLessons'] ?? []);
+      final completedCount = completedLessons.length;
+
+      // Calculate percentage
+      final percentage =
+          totalLessons > 0 ? (completedCount / totalLessons) * 100 : 0.0;
+
+      // Update the progress document
+      await progressDoc.reference.update({
+        'completionPercentage': percentage,
+        'lastUpdated': FieldValue.serverTimestamp(),
+      });
+
+      AppLogger.info(
+          'Recalculated progress: $completedCount/$totalLessons = ${percentage.toStringAsFixed(2)}%');
+    } catch (e) {
+      AppLogger.error('Error recalculating progress percentage: $e', error: e);
+      rethrow;
+    }
+  }
+
+  // Ensure all progress documents have userId
+  Future<void> validateAllProgressDocuments() async {
+    try {
+      final progressSnapshot = await _firestore.collection('progress').get();
+
+      int invalidCount = 0;
+
+      for (final doc in progressSnapshot.docs) {
+        final data = doc.data();
+
+        if (!data.containsKey('userId') ||
+            data['userId'] == null ||
+            data['userId'] == '') {
+          invalidCount++;
+          AppLogger.warning('Invalid progress document found: ${doc.id}');
+        }
+      }
+
+      AppLogger.info(
+          'Progress validation complete. Found $invalidCount invalid documents out of ${progressSnapshot.docs.length} total.');
+    } catch (e) {
+      AppLogger.error('Error validating progress documents: $e', error: e);
+      rethrow;
+    }
+  }
+
   // SYNC XP DATA - Helper method to fix inconsistencies
   Future<void> syncUserXP(String uid) async {
     try {
@@ -1106,7 +1623,7 @@ class DatabaseService {
           Map<String, dynamic> statsData =
               statsDoc.data() as Map<String, dynamic>;
           int correctXP = statsData['totalXP'] ?? 0;
-          int correctLevel = statsData['level'] ?? 1;
+          int correctLevel = FirebaseConfig.calculateLevel(correctXP);
 
           // Update users collection to match
           transaction.update(_usersCollection.doc(uid), {
@@ -1114,6 +1631,13 @@ class DatabaseService {
             'xp': correctXP, // For backward compatibility
             'level': correctLevel,
           });
+
+          // Also update level in stats if needed
+          if (statsData['level'] != correctLevel) {
+            transaction.update(_userStatsCollection.doc(uid), {
+              'level': correctLevel,
+            });
+          }
 
           AppLogger.info(
               'Synced XP for user $uid: $correctXP XP, Level $correctLevel');

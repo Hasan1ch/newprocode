@@ -6,14 +6,17 @@ import 'package:procode/models/quiz_result_model.dart';
 import 'package:procode/services/database_service.dart';
 import 'package:procode/services/gamification_service.dart';
 import 'package:procode/services/gemini_service.dart';
+import 'package:procode/config/firebase_config.dart';
 import 'package:procode/utils/app_logger.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class QuizProvider extends ChangeNotifier {
   final DatabaseService _databaseService = DatabaseService();
   final GamificationService _gamificationService = GamificationService();
   final GeminiService _geminiService = GeminiService();
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   List<Quiz> _availableQuizzes = [];
   Quiz? _currentQuiz;
@@ -220,7 +223,7 @@ class QuizProvider extends ChangeNotifier {
     return false;
   }
 
-  // Submit quiz
+  // FIXED: Submit quiz with proper XP handling
   Future<void> submitQuiz() async {
     if (_currentQuiz == null || _quizStartTime == null) return;
 
@@ -298,16 +301,34 @@ class QuizProvider extends ChangeNotifier {
       final score = (correctAnswers / _currentQuestions.length * 100).round();
       final passed = score >= _currentQuiz!.passingScore;
 
-      // Calculate XP based on score
+      // Calculate XP based on score and difficulty
       int xpEarned = 0;
+      int baseXP = 0;
+
+      // Determine base XP based on difficulty
+      switch (_currentQuiz!.difficulty.toLowerCase()) {
+        case 'easy':
+          baseXP = FirebaseConfig.xpPerEasyQuiz;
+          break;
+        case 'medium':
+          baseXP = FirebaseConfig.xpPerMediumQuiz;
+          break;
+        case 'hard':
+          baseXP = FirebaseConfig.xpPerHardQuiz;
+          break;
+        default:
+          baseXP = FirebaseConfig.xpPerEasyQuiz;
+      }
+
+      // Calculate actual XP based on score
       if (score >= 90) {
-        xpEarned = _currentQuiz!.xpReward;
+        xpEarned = baseXP;
       } else if (score >= 70) {
-        xpEarned = (_currentQuiz!.xpReward * 0.7).round();
+        xpEarned = (baseXP * 0.7).round();
       } else if (score >= 50) {
-        xpEarned = (_currentQuiz!.xpReward * 0.4).round();
+        xpEarned = (baseXP * 0.4).round();
       } else {
-        xpEarned = (_currentQuiz!.xpReward * 0.2).round();
+        xpEarned = (baseXP * 0.2).round();
       }
 
       // Create quiz result
@@ -330,16 +351,15 @@ class QuizProvider extends ChangeNotifier {
       // Save result to database
       await _databaseService.saveQuizResult(_lastResult!);
 
-      // Award XP
-      await _gamificationService.awardXP(_currentUserId, xpEarned);
-
-      // Mark quiz as completed in user stats
-      await _databaseService.markQuizCompleted(
-        _currentUserId,
-        _currentQuiz!.id,
-        score,
-        xpEarned,
-      );
+      // Award XP using the database service
+      if (xpEarned > 0) {
+        await _databaseService.markQuizCompleted(
+          _currentUserId,
+          _currentQuiz!.id,
+          score,
+          xpEarned,
+        );
+      }
 
       // Generate AI feedback (optional, can be disabled if causing issues)
       try {
@@ -378,6 +398,13 @@ class QuizProvider extends ChangeNotifier {
             ? "Great job! Keep up the excellent work!"
             : "Don't give up! Every attempt brings you closer to mastery.";
       }
+
+      // Check for achievements
+      await _gamificationService.checkAndAwardAchievements(
+        _currentUserId,
+        'quiz_completed',
+        score,
+      );
     } catch (e) {
       _error = 'Failed to submit quiz: $e';
       AppLogger.error('Failed to submit quiz', error: e);

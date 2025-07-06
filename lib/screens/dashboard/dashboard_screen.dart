@@ -11,6 +11,7 @@ import 'package:procode/screens/courses/courses_list_screen.dart';
 import 'package:procode/screens/code_editor/code_editor_screen.dart';
 import 'package:procode/screens/quiz/quiz_categories_screen.dart';
 import 'package:procode/screens/profile/profile_screen.dart';
+import 'package:procode/utils/app_logger.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -37,40 +38,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_isInitialized) {
         _loadInitialData();
-        _syncXPData(); // Add XP sync to fix inconsistencies
         _isInitialized = true;
       }
     });
   }
 
   Future<void> _loadInitialData() async {
-    final authProvider = context.read<AuthProvider>();
-    final courseProvider = context.read<CourseProvider>();
-    final userProvider = context.read<UserProvider>();
-
-    // Initialize real-time listeners for user data
-    if (authProvider.firebaseUser != null) {
-      // First load user data with real-time listeners
-      await userProvider.loadUser(authProvider.firebaseUser!.uid);
-
-      // Then load courses after user is loaded
-      await courseProvider.loadCourses();
-
-      // Update streak on login
-      await _updateStreakOnLogin(authProvider.firebaseUser!.uid);
-    }
-  }
-
-  // Sync XP data between users and user_stats collections
-  Future<void> _syncXPData() async {
-    final authProvider = context.read<AuthProvider>();
-    if (authProvider.firebaseUser != null) {
-      final databaseService = DatabaseService();
-      await databaseService.syncUserXP(authProvider.firebaseUser!.uid);
-
-      // Refresh user data after sync
+    try {
+      final authProvider = context.read<AuthProvider>();
+      final courseProvider = context.read<CourseProvider>();
       final userProvider = context.read<UserProvider>();
-      await userProvider.refresh();
+
+      if (authProvider.firebaseUser != null) {
+        final userId = authProvider.firebaseUser!.uid;
+
+        // Load user data first
+        await userProvider.loadUser(userId);
+
+        // Load courses using the existing method
+        await courseProvider.loadCourses();
+
+        // Initialize real-time listeners if the method exists
+        if (courseProvider.runtimeType
+            .toString()
+            .contains('initializeRealTimeListeners')) {
+          await courseProvider.initializeRealTimeListeners();
+        }
+
+        // Update streak on login
+        await _updateStreakOnLogin(userId);
+
+        AppLogger.info('Dashboard initialized successfully');
+      }
+    } catch (e) {
+      AppLogger.error('Error initializing dashboard: $e');
     }
   }
 
@@ -80,7 +81,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final databaseService = DatabaseService();
       await databaseService.updateStreak(userId);
     } catch (e) {
-      print('Error updating streak: $e');
+      AppLogger.error('Error updating streak: $e');
     }
   }
 
@@ -168,7 +169,7 @@ class HomeTab extends StatelessWidget {
     final userProvider = context.watch<UserProvider>();
     final courseProvider = context.watch<CourseProvider>();
 
-    // Use real-time data from UserProvider
+    // Use real-time data from providers
     final user = userProvider.user;
     final isLoading = userProvider.isLoading || courseProvider.isLoading;
 
@@ -224,7 +225,7 @@ class HomeTab extends StatelessWidget {
                       ),
                       const SizedBox(height: 24),
 
-                      // Real-time Stats Cards with Loading States
+                      // Real-time Stats Cards
                       Row(
                         children: [
                           Expanded(
@@ -260,25 +261,44 @@ class HomeTab extends StatelessWidget {
                       ),
                       const SizedBox(height: 24),
 
-                      // Continue Learning section
+                      // Continue Learning section with actual progress
                       if (courseProvider.enrolledCourses.isNotEmpty) ...[
-                        Text(
-                          'Continue Learning',
-                          style: theme.textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Continue Learning',
+                              style: theme.textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            if (courseProvider.enrolledCourses.length > 2)
+                              TextButton(
+                                onPressed: () {
+                                  final parent =
+                                      context.findAncestorStateOfType<
+                                          _DashboardScreenState>();
+                                  if (parent != null) {
+                                    parent.navigateToTab(1);
+                                  }
+                                },
+                                child: const Text('View All'),
+                              ),
+                          ],
                         ),
                         const SizedBox(height: 16),
                         ...courseProvider.enrolledCourses.take(2).map((course) {
                           final progress =
                               courseProvider.getProgressForCourse(course.id);
+                          final completionPercentage = courseProvider
+                              .getCourseCompletionPercentage(course.id);
+
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 12),
                             child: ContinueLearningCard(
                               course: course,
                               progress: progress,
-                              completionPercentage: courseProvider
-                                  .getCourseCompletionPercentage(course.id),
+                              completionPercentage: completionPercentage,
                             ),
                           );
                         }).toList(),
@@ -311,7 +331,6 @@ class HomeTab extends StatelessWidget {
                                 const SizedBox(height: 24),
                                 ElevatedButton(
                                   onPressed: () {
-                                    // Navigate to courses - Fixed mounted issue
                                     final parent =
                                         context.findAncestorStateOfType<
                                             _DashboardScreenState>();
@@ -340,6 +359,56 @@ class HomeTab extends StatelessWidget {
 
                       const SizedBox(height: 24),
 
+                      // Additional Stats Section
+                      if (user != null && userProvider.userStats != null) ...[
+                        Text(
+                          'Your Progress',
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceAround,
+                                children: [
+                                  _buildProgressItem(
+                                    'Lessons',
+                                    userProvider.userStats!.lessonsCompleted
+                                        .toString(),
+                                    Icons.book_outlined,
+                                    theme,
+                                  ),
+                                  _buildProgressItem(
+                                    'Quizzes',
+                                    userProvider.userStats!.quizzesCompleted
+                                        .toString(),
+                                    Icons.quiz_outlined,
+                                    theme,
+                                  ),
+                                  _buildProgressItem(
+                                    'Courses',
+                                    courseProvider.enrolledCourses.length
+                                        .toString(),
+                                    Icons.school_outlined,
+                                    theme,
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                      ],
+
                       // Daily Challenge
                       Text(
                         'Daily Challenge',
@@ -357,6 +426,28 @@ class HomeTab extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildProgressItem(
+      String label, String value, IconData icon, ThemeData theme) {
+    return Column(
+      children: [
+        Icon(icon, color: theme.colorScheme.primary, size: 28),
+        const SizedBox(height: 8),
+        Text(
+          value,
+          style: theme.textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        Text(
+          label,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
     );
   }
 }

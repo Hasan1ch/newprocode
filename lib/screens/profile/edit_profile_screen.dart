@@ -30,16 +30,24 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   void initState() {
     super.initState();
+    // Don't initialize here, wait for didChangeDependencies
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
     _initializeControllers();
   }
 
   void _initializeControllers() {
-    final user = context.read<UserProvider>().user;
+    final user = Provider.of<UserProvider>(context, listen: false).user;
     if (user != null) {
       _displayNameController.text = user.displayName;
       _bioController.text = user.bio ?? '';
-      _selectedCountry = user.country;
-      _selectedLearningGoal = user.learningGoal;
+      setState(() {
+        _selectedCountry = user.country;
+        _selectedLearningGoal = user.learningGoal;
+      });
     }
   }
 

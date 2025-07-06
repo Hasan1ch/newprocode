@@ -6,6 +6,8 @@ import 'package:procode/screens/profile/edit_profile_screen.dart';
 import 'package:procode/screens/profile/achievements_screen.dart';
 import 'package:procode/screens/profile/widgets/stats_grid.dart';
 import 'package:procode/screens/profile/widgets/achievement_badge.dart';
+import 'package:procode/screens/leaderboard/leaderboard_screen.dart';
+import 'package:procode/screens/settings/settings_screen.dart';
 import 'package:procode/widgets/common/loading_widget.dart';
 import 'package:procode/widgets/common/error_widget.dart';
 import 'package:procode/widgets/common/gradient_container.dart';
@@ -121,8 +123,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                   actions: [
+                    // Settings Button - NEW ADDITION
+                    IconButton(
+                      icon: const Icon(Icons.settings_outlined),
+                      tooltip: 'Settings',
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const SettingsScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    // Leaderboard Button
+                    IconButton(
+                      icon: const Icon(Icons.leaderboard_outlined),
+                      tooltip: 'Leaderboard',
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const LeaderboardScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    // Edit Profile Button
                     IconButton(
                       icon: const Icon(Icons.edit_outlined),
+                      tooltip: 'Edit Profile',
                       onPressed: () {
                         Navigator.push(
                           context,
@@ -190,6 +220,109 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                       // Stats Grid
                       const StatsGrid(),
+                      const SizedBox(height: 16),
+
+                      // Quick Actions Section - NEW ADDITION
+                      Row(
+                        children: [
+                          // Settings Card
+                          Expanded(
+                            child: Card(
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => const SettingsScreen(),
+                                      ),
+                                    );
+                                  },
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16),
+                                    child: Column(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(12),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.primary
+                                                .withValues(alpha: 0.1),
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                          ),
+                                          child: Icon(
+                                            Icons.settings,
+                                            color: AppColors.primary,
+                                            size: 24,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          'Settings',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyMedium,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          // Leaderboard Card
+                          Expanded(
+                            child: Card(
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const LeaderboardScreen(),
+                                      ),
+                                    );
+                                  },
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16),
+                                    child: Column(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(12),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.secondary
+                                                .withValues(alpha: 0.1),
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                          ),
+                                          child: Icon(
+                                            Icons.leaderboard,
+                                            color: AppColors.secondary,
+                                            size: 24,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          'Leaderboard',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyMedium,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: 16),
 
                       // Featured Achievements

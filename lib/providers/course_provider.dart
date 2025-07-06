@@ -89,6 +89,11 @@ class CourseProvider extends ChangeNotifier {
   Future<void> _loadEnrolledCourses() async {
     try {
       final userId = _authService.currentUser!.uid;
+
+      // CRITICAL FIX: Clear existing user progress first
+      _userProgress.clear();
+      _enrolledCourses.clear();
+
       final progressSnapshot = await _firestore
           .collection(FirebaseConfig.progressCollection)
           .where('userId', isEqualTo: userId)
@@ -107,7 +112,10 @@ class CourseProvider extends ChangeNotifier {
           'id': doc.id,
           ...doc.data(),
         });
-        _userProgress[progress.courseId] = progress;
+        // Only add progress if it belongs to the current user
+        if (progress.userId == userId) {
+          _userProgress[progress.courseId] = progress;
+        }
       }
     } catch (e) {
       print('Error loading enrolled courses: $e');
@@ -122,12 +130,20 @@ class CourseProvider extends ChangeNotifier {
       // Cancel existing subscription
       _progressSubscription?.cancel();
 
+      // CRITICAL FIX: Clear existing data before setting up listener
+      _userProgress.clear();
+      _enrolledCourses.clear();
+
       // Set up real-time listener for progress collection
       _progressSubscription = _firestore
           .collection(FirebaseConfig.progressCollection)
           .where('userId', isEqualTo: userId)
           .snapshots()
           .listen((snapshot) async {
+        // Clear existing data to ensure fresh state
+        _userProgress.clear();
+        _enrolledCourses.clear();
+
         // Get course IDs from progress documents
         final courseIds = snapshot.docs
             .map((doc) => doc.data()['courseId'] as String)
@@ -144,23 +160,27 @@ class CourseProvider extends ChangeNotifier {
             _courses.where((course) => courseIds.contains(course.id)).toList();
 
         // Update progress for each enrolled course
-        _userProgress.clear();
         for (final doc in snapshot.docs) {
-          final progress = Progress.fromJson({
-            'id': doc.id,
-            ...doc.data(),
-          });
-          _userProgress[progress.courseId] = progress;
+          final progressData = doc.data();
 
-          // Load modules for this course if not already loaded
-          if (!_courseModules.containsKey(progress.courseId)) {
-            await loadModulesForCourse(progress.courseId);
+          // CRITICAL: Verify this progress belongs to the current user
+          if (progressData['userId'] == userId) {
+            final progress = Progress.fromJson({
+              'id': doc.id,
+              ...progressData,
+            });
+            _userProgress[progress.courseId] = progress;
+
+            // Load modules for this course if not already loaded
+            if (!_courseModules.containsKey(progress.courseId)) {
+              await loadModulesForCourse(progress.courseId);
+            }
           }
         }
 
         notifyListeners();
         print(
-            'Real-time progress update: ${_enrolledCourses.length} courses enrolled');
+            'Real-time progress update: ${_enrolledCourses.length} courses enrolled for user $userId');
       }, onError: (error) {
         print('Error in progress real-time listener: $error');
         // Fallback to regular loading
@@ -245,6 +265,19 @@ class CourseProvider extends ChangeNotifier {
     try {
       final userId = _authService.currentUser!.uid;
 
+      // Check if already enrolled
+      final existingProgress = await _firestore
+          .collection(FirebaseConfig.progressCollection)
+          .where('userId', isEqualTo: userId)
+          .where('courseId', isEqualTo: courseId)
+          .get();
+
+      if (existingProgress.docs.isNotEmpty) {
+        _error = 'Already enrolled in this course';
+        notifyListeners();
+        return;
+      }
+
       final progress = Progress(
         id: '',
         userId: userId,
@@ -281,14 +314,17 @@ class CourseProvider extends ChangeNotifier {
     }
   }
 
-  // Mark lesson as completed
+  // FIXED: Mark lesson as completed with proper XP handling
   Future<void> completeLesson(
       String courseId, String moduleId, String lessonId) async {
     try {
       final userId = _authService.currentUser!.uid;
       final progress = _userProgress[courseId];
 
-      if (progress == null) return;
+      if (progress == null || progress.userId != userId) return;
+
+      // Check if lesson was already completed
+      final wasAlreadyCompleted = progress.completedLessons.contains(lessonId);
 
       // Update completed lessons
       final updatedLessons = [...progress.completedLessons];
@@ -316,16 +352,22 @@ class CourseProvider extends ChangeNotifier {
         totalLessonsInCourse += mod.lessonIds.length;
       }
 
-      // Update progress
+      // Calculate completion percentage
+      final completionPercentage = totalLessonsInCourse > 0
+          ? (updatedLessons.length / totalLessonsInCourse) * 100
+          : 0.0;
+
+      // Only award XP if this is the first time completing the lesson
+      final xpToAward = wasAlreadyCompleted ? 0 : FirebaseConfig.xpPerLesson;
+
+      // Update progress in Firestore
       final updatedProgress = progress.copyWith(
         completedLessons: updatedLessons,
         completedModules: updatedModules,
-        totalXpEarned: progress.totalXpEarned + FirebaseConfig.xpPerLesson,
+        totalXpEarned: progress.totalXpEarned + xpToAward,
         lastAccessedAt: DateTime.now(),
         lastAccessedLesson: lessonId,
-        completionPercentage: totalLessonsInCourse > 0
-            ? (updatedLessons.length / totalLessonsInCourse) * 100
-            : 0.0,
+        completionPercentage: completionPercentage,
       );
 
       await _firestore
@@ -335,29 +377,52 @@ class CourseProvider extends ChangeNotifier {
 
       _userProgress[courseId] = updatedProgress;
 
-      // Update user stats
-      await _updateUserStats(FirebaseConfig.xpPerLesson);
+      // Award XP using the database service if not already completed
+      if (xpToAward > 0) {
+        await _databaseService.markLessonCompleted(userId, lessonId, xpToAward);
+      }
+
+      // Check if course is completed
+      if (completionPercentage >= 100 && !wasAlreadyCompleted) {
+        await _checkAndCompleteCourse(courseId, userId);
+      }
 
       notifyListeners();
     } catch (e) {
       _error = 'Failed to complete lesson: $e';
       notifyListeners();
+      print('Error in completeLesson: $e');
     }
   }
 
-  // Update user stats
-  Future<void> _updateUserStats(int xpGained) async {
+  // Check and complete course with bonus XP
+  Future<void> _checkAndCompleteCourse(String courseId, String userId) async {
     try {
-      final userId = _authService.currentUser!.uid;
-      await _firestore
-          .collection(FirebaseConfig.userStatsCollection)
-          .doc(userId)
-          .update({
-        'totalXP': FieldValue.increment(xpGained),
-        'lastActiveDate': FieldValue.serverTimestamp(),
-      });
+      final userDoc = await _firestore.collection('users').doc(userId).get();
+      if (!userDoc.exists) return;
+
+      final completedCourses = List<String>.from(
+        userDoc.data()!['completedCourses'] ?? [],
+      );
+
+      if (!completedCourses.contains(courseId)) {
+        // Update user's completed courses
+        await _firestore.collection('users').doc(userId).update({
+          'completedCourses': FieldValue.arrayUnion([courseId]),
+        });
+
+        // Award bonus XP for course completion
+        await _databaseService.addXP(userId, 50); // Bonus XP
+
+        // Update course completed count in user_stats
+        await _firestore.collection('user_stats').doc(userId).update({
+          'coursesCompleted': FieldValue.increment(1),
+        });
+
+        print('Course $courseId completed by user $userId with bonus XP');
+      }
     } catch (e) {
-      print('Error updating user stats: $e');
+      print('Error checking course completion: $e');
     }
   }
 
@@ -468,14 +533,41 @@ class CourseProvider extends ChangeNotifier {
 
   // Force refresh all data
   Future<void> refresh() async {
+    // Cancel existing subscriptions first
+    await _cancelSubscriptions();
+
+    // Clear all data
     _isInitialized = false;
-    await loadCourses();
+    _userProgress.clear();
+    _enrolledCourses.clear();
+    _courseModules.clear();
+
+    // Reload if user is authenticated
+    if (_authService.currentUser != null) {
+      await loadCourses();
+    }
+  }
+
+  // Clear data when user logs out
+  void clearUserData() {
+    _cancelSubscriptions();
+    _userProgress.clear();
+    _enrolledCourses.clear();
+    _isInitialized = false;
+    notifyListeners();
+  }
+
+  // Cancel all subscriptions
+  Future<void> _cancelSubscriptions() async {
+    await _progressSubscription?.cancel();
+    await _modulesSubscription?.cancel();
+    _progressSubscription = null;
+    _modulesSubscription = null;
   }
 
   @override
   void dispose() {
-    _progressSubscription?.cancel();
-    _modulesSubscription?.cancel();
+    _cancelSubscriptions();
     _courses.clear();
     _enrolledCourses.clear();
     _courseModules.clear();
