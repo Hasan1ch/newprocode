@@ -1,18 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:procode/screens/ai_advisor/ai_advisor_screen.dart';
-import 'package:intl/intl.dart';
 import 'package:procode/config/theme.dart';
+import 'package:intl/intl.dart';
+
+// Define ChatMessage class here
+class ChatMessage {
+  final String text;
+  final bool isUser;
+  final DateTime? timestamp;
+  final bool isError;
+
+  const ChatMessage({
+    required this.text,
+    required this.isUser,
+    required this.timestamp,
+    this.isError = false,
+  });
+}
 
 class ChatBubble extends StatelessWidget {
   final ChatMessage message;
   final bool isLoading;
 
   const ChatBubble({
-    Key? key,
+    super.key,
     required this.message,
     this.isLoading = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -59,7 +73,7 @@ class ChatBubble extends StatelessWidget {
                     color: !message.isUser
                         ? (message.isError
                             ? theme.colorScheme.errorContainer
-                            : theme.colorScheme.surfaceVariant)
+                            : theme.colorScheme.surfaceContainerHighest)
                         : null,
                     borderRadius: BorderRadius.only(
                       topLeft: const Radius.circular(16),
@@ -78,7 +92,7 @@ class ChatBubble extends StatelessWidget {
                               ? Colors.white
                               : (message.isError
                                   ? theme.colorScheme.onErrorContainer
-                                  : theme.colorScheme.onSurfaceVariant),
+                                  : theme.colorScheme.onSurface),
                           fontSize: 15,
                         ),
                       ),
@@ -155,6 +169,8 @@ class ChatBubble extends StatelessWidget {
   }
 
   Widget _buildLoadingBubble(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Padding(
       padding: const EdgeInsets.only(right: 48, bottom: 16),
       child: Row(
@@ -162,7 +178,7 @@ class ChatBubble extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 20,
-            backgroundColor: Theme.of(context).colorScheme.primary,
+            backgroundColor: theme.colorScheme.primary,
             child: const Icon(
               Icons.auto_awesome,
               color: Colors.white,
@@ -173,7 +189,7 @@ class ChatBubble extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceVariant,
+              color: theme.colorScheme.surfaceContainerHighest,
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(16),
                 topRight: Radius.circular(16),
@@ -190,7 +206,7 @@ class ChatBubble extends StatelessWidget {
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
                     valueColor: AlwaysStoppedAnimation<Color>(
-                      Theme.of(context).colorScheme.primary,
+                      theme.colorScheme.primary,
                     ),
                   ),
                 ),
@@ -198,7 +214,7 @@ class ChatBubble extends StatelessWidget {
                 Text(
                   'Thinking...',
                   style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
               ],
@@ -223,6 +239,8 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -235,7 +253,7 @@ class _ActionButton extends StatelessWidget {
             child: Icon(
               icon,
               size: 16,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
         ),

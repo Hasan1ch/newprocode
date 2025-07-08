@@ -1,28 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'package:procode/providers/user_provider.dart';
 import 'package:procode/services/gemini_service.dart';
 import 'package:procode/widgets/common/loading_widget.dart';
 import 'package:procode/config/theme.dart';
 import 'package:procode/config/app_colors.dart';
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:procode/utils/app_logger.dart';
 
-class AIAdvisorScreen extends StatefulWidget {
-  const AIAdvisorScreen({super.key});
+class AIAdvisorDebugScreen extends StatefulWidget {
+  const AIAdvisorDebugScreen({super.key});
 
   @override
-  State<AIAdvisorScreen> createState() => _AIAdvisorScreenState();
+  State<AIAdvisorDebugScreen> createState() => _AIAdvisorDebugScreenState();
 }
 
-class _AIAdvisorScreenState extends State<AIAdvisorScreen> {
+class _AIAdvisorDebugScreenState extends State<AIAdvisorDebugScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final GeminiService _geminiService = GeminiService();
 
   final List<ChatMessage> _messages = [];
   bool _isLoading = false;
+  bool _apiConnected = false;
+  String? _apiError;
 
   // Conversation state
   int _currentStep = 0;
@@ -39,7 +40,46 @@ class _AIAdvisorScreenState extends State<AIAdvisorScreen> {
   @override
   void initState() {
     super.initState();
-    _startConversation();
+    _checkAPIStatus();
+  }
+
+  Future<void> _checkAPIStatus() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Check if API key exists
+      final apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
+
+      if (apiKey.isEmpty) {
+        setState(() {
+          _apiError = 'GEMINI_API_KEY not found in .env file';
+          _apiConnected = false;
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // Test connection
+      final isConnected = await _geminiService.testConnection();
+
+      setState(() {
+        _apiConnected = isConnected;
+        _apiError = isConnected ? null : 'Failed to connect to Gemini API';
+        _isLoading = false;
+      });
+
+      if (isConnected) {
+        _startConversation();
+      }
+    } catch (e) {
+      setState(() {
+        _apiError = 'Error: $e';
+        _apiConnected = false;
+        _isLoading = false;
+      });
+    }
   }
 
   void _startConversation() {
@@ -119,6 +159,7 @@ Please tell me about your programming goals and dreams!''',
         _currentStep++;
       }
     } catch (e) {
+      AppLogger.error('Error sending message', error: e);
       _addMessage(ChatMessage(
         text: 'Sorry, I encountered an error. Please try again.',
         isUser: false,
@@ -137,46 +178,58 @@ Please tell me about your programming goals and dreams!''',
         return await _geminiService.getChatResponse(
           message: userInput,
           systemPrompt:
-              '''You are an AI Learning Advisor having a conversation. The user just told you their programming goals: "$userInput".
+              '''You are a friendly AI Learning Advisor for ProCode app. The user wants to: "$userInput".
 
-Acknowledge their goal enthusiastically and ask about their current experience level. Be specific and friendly.
+Respond warmly and ask about their programming experience. Be conversational, like texting a helpful friend.
 
-Ask them:
-- Have they done any programming before?
-- What languages do they know (if any)?
-- Rate their experience: complete beginner, some basics, intermediate, or advanced?
+Example response style:
+"That's awesome! Game development is such an exciting field! 🎮 
 
-Keep it conversational and encouraging.''',
+I'd love to know more about your programming background:
+• Have you written any code before?
+• Do you know any programming languages?
+• Would you say you're a complete beginner, or do you have some experience?"
+
+Keep it short, friendly, and use emojis sparingly. Max 100 words.''',
         );
 
       case 'experience':
         return await _geminiService.getChatResponse(
           message: userInput,
-          systemPrompt: '''The user's goal is: ${_userResponses['goal']}
-Their experience level: "$userInput"
+          systemPrompt: '''Goal: ${_userResponses['goal']}
+Experience: "$userInput"
 
-Acknowledge their experience level positively. Now ask about their time commitment:
-- How many hours per week can they dedicate to learning?
-- Are they looking for intensive learning or steady progress?
-- Do they have a timeline for achieving their goal?
+Acknowledge their experience warmly and ask about time commitment. Be encouraging and conversational.
 
-Be encouraging and realistic about time expectations.''',
+Example style:
+"Perfect! [Comment on their experience level positively]
+
+Let's figure out a schedule that works for you:
+• How many hours per week can you dedicate to learning?
+• Do you prefer intensive study or steady progress?
+• Any deadline for your goals?"
+
+Keep it friendly and under 100 words.''',
         );
 
       case 'time':
         return await _geminiService.getChatResponse(
           message: userInput,
-          systemPrompt: '''User's goal: ${_userResponses['goal']}
+          systemPrompt: '''Goal: ${_userResponses['goal']}
 Experience: ${_userResponses['experience']}
-Time commitment: "$userInput"
+Time: "$userInput"
 
-Great! Now ask about their specific interests and preferred learning style:
-- What type of projects excite them most?
-- Do they prefer theory first or hands-on learning?
-- Any specific technologies or frameworks they're curious about?
-- What motivates them to learn?
+Great! Last question - ask about their interests and learning style. Keep it simple and friendly.
 
-Keep it friendly and show genuine interest.''',
+Example style:
+"[Positive comment about their time commitment]
+
+One more thing - what excites you most?
+• Any specific type of projects you'd love to build?
+• Do you prefer learning theory first or jumping into coding?
+• Any particular tech/tools you're curious about?"
+
+Max 80 words, conversational tone.''',
         );
 
       case 'interests':
@@ -188,113 +241,56 @@ Experience: ${_userResponses['experience']}
 Time: ${_userResponses['time']}
 Interests: "$userInput"
 
-Now provide a detailed, personalized learning path. Include:
+Create a personalized learning path. Format your response like this:
 
-1. **Summary of their profile** - Briefly summarize what you understand about them
+🎯 **Your Learning Path**
+Write a brief 2-3 sentence overview of their personalized journey.
 
-2. **Recommended Learning Path** with 4-6 courses in order:
-   - Course name
-   - What they'll learn
-   - Why it's important for their goal
-   - Estimated duration
-   - Difficulty level
+📚 **Recommended Courses** (list 4-5 courses in order)
 
-3. **Learning Strategy**:
-   - Daily/weekly schedule suggestion
-   - Project ideas along the way
-   - Milestones to track progress
+**1. [Course Name]**
+→ What you'll learn: [Brief description]
+→ Duration: [X weeks] | Level: [Beginner/Intermediate/Advanced]
 
-4. **Tips for Success**:
-   - Specific advice based on their situation
-   - Resources and communities to join
-   - How to stay motivated
+**2. [Course Name]**
+→ What you'll learn: [Brief description]
+→ Duration: [X weeks] | Level: [Beginner/Intermediate/Advanced]
 
-5. **Next Steps**:
-   - What to start with today
-   - First week goals
+(Continue for all courses...)
 
-Be detailed, encouraging, and specific to their situation. Format with clear sections using markdown.''',
+📅 **Your Weekly Schedule**
+Based on ${_userResponses['time']}, here's how to organize your week:
+• Monday/Wednesday/Friday: [Specific activity]
+• Tuesday/Thursday: [Specific activity]
+• Weekend: [Specific activity]
+
+🚀 **Start This Week**
+• Day 1-2: [Specific action]
+• Day 3-4: [Specific action]
+• Day 5-7: [Specific action]
+
+💡 **Tips for Success**
+• [Practical tip 1]
+• [Practical tip 2]
+• [Practical tip 3]
+
+Keep the language friendly, encouraging, and easy to read. NO TABLES.''',
         );
 
       case 'recommendations':
         return await _geminiService.getChatResponse(
           message: userInput,
           systemPrompt: '''The user is responding to your recommendations. 
-Their original goal: ${_userResponses['goal']}
+Their goal was: ${_userResponses['goal']}
 
-Provide helpful follow-up based on their message. They might be:
-- Asking for clarification
-- Requesting alternative paths
-- Asking about specific technologies
-- Wanting more details
-
-Be helpful and offer to adjust recommendations if needed. Always be encouraging and supportive.''',
+Provide a helpful follow-up. They might be asking for clarification or alternatives.
+Be supportive and offer to adjust recommendations if needed.
+Keep response conversational and under 150 words.''',
         );
 
       default:
         return 'I\'m here to help! What would you like to know?';
     }
-  }
-
-  Future<void> _saveConversation() async {
-    try {
-      final StringBuffer content = StringBuffer();
-      content.writeln('ProCode - AI Learning Advisor Conversation');
-      content
-          .writeln('Generated on: ${DateTime.now().toString().split('.')[0]}');
-      content.writeln('=' * 50);
-      content.writeln();
-
-      for (var message in _messages) {
-        content.writeln(message.isUser ? 'You:' : 'AI Advisor:');
-        content.writeln(message.text);
-        content.writeln();
-      }
-
-      content.writeln('=' * 50);
-      content
-          .writeln('Saved from ProCode - Your AI-Powered Learning Companion');
-
-      final directory = await getApplicationDocumentsDirectory();
-      final fileName =
-          'procode_ai_conversation_${DateTime.now().millisecondsSinceEpoch}.txt';
-      final file = File('${directory.path}/$fileName');
-
-      await file.writeAsString(content.toString());
-
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        subject: 'ProCode AI Learning Path',
-        text: 'My personalized learning path from ProCode AI Advisor',
-      );
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Conversation saved successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to save: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  void _resetConversation() {
-    setState(() {
-      _messages.clear();
-      _currentStep = 0;
-      _userResponses.clear();
-    });
-    _startConversation();
   }
 
   @override
@@ -309,23 +305,67 @@ Be helpful and offer to adjust recommendations if needed. Always be encouraging 
         backgroundColor: theme.colorScheme.surface,
         elevation: 0,
         actions: [
-          if (_messages.length > 2)
-            IconButton(
-              icon: const Icon(Icons.save_alt),
-              onPressed: _saveConversation,
-              tooltip: 'Save Conversation',
-            ),
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _resetConversation,
-            tooltip: 'Start Over',
+            onPressed: () {
+              setState(() {
+                _messages.clear();
+                _currentStep = 0;
+                _userResponses.clear();
+              });
+              _checkAPIStatus();
+            },
+            tooltip: 'Restart',
           ),
         ],
       ),
       body: Column(
         children: [
+          // API Status Bar
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: _apiConnected
+                  ? Colors.green.withOpacity(0.1)
+                  : Colors.red.withOpacity(0.1),
+              border: Border(
+                bottom: BorderSide(
+                  color: _apiConnected ? Colors.green : Colors.red,
+                  width: 2,
+                ),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  _apiConnected ? Icons.check_circle : Icons.error,
+                  color: _apiConnected ? Colors.green : Colors.red,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _apiConnected
+                        ? 'Gemini API Connected'
+                        : _apiError ?? 'API Disconnected',
+                    style: TextStyle(
+                      color: _apiConnected ? Colors.green : Colors.red,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                if (!_apiConnected)
+                  TextButton(
+                    onPressed: _checkAPIStatus,
+                    child: const Text('Retry'),
+                  ),
+              ],
+            ),
+          ),
+
           // Progress Indicator
-          if (_currentStep < _conversationSteps.length - 1)
+          if (_currentStep < _conversationSteps.length - 1 && _apiConnected)
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -368,89 +408,92 @@ Be helpful and offer to adjust recommendations if needed. Always be encouraging 
               ),
             ),
 
-          // Chat Messages
+          // Chat Messages or Loading
           Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(16),
-              itemCount: _messages.length + (_isLoading ? 1 : 0),
-              itemBuilder: (context, index) {
-                if (index == _messages.length && _isLoading) {
-                  return _buildLoadingIndicator();
-                }
+            child: _isLoading && _messages.isEmpty
+                ? const Center(child: LoadingWidget())
+                : ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _messages.length + (_isLoading ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (index == _messages.length && _isLoading) {
+                        return _buildLoadingIndicator();
+                      }
 
-                final message = _messages[index];
-                return _buildMessageBubble(message);
-              },
-            ),
+                      final message = _messages[index];
+                      return _buildMessageBubble(message);
+                    },
+                  ),
           ),
 
           // Input Area
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              border: Border(
-                top: BorderSide(
-                  color: theme.colorScheme.surfaceVariant,
+          if (_apiConnected)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                border: Border(
+                  top: BorderSide(
+                    color: theme.colorScheme.surfaceVariant,
+                  ),
                 ),
               ),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    decoration: InputDecoration(
-                      hintText: 'Type your message...',
-                      hintStyle: TextStyle(
-                        color: theme.colorScheme.onSurfaceVariant,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _messageController,
+                      decoration: InputDecoration(
+                        hintText: 'Type your message...',
+                        hintStyle: TextStyle(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                        filled: true,
+                        fillColor:
+                            theme.colorScheme.surfaceVariant.withOpacity(0.5),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(24),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
                       ),
-                      filled: true,
-                      fillColor:
-                          theme.colorScheme.surfaceVariant.withOpacity(0.5),
-                      border: OutlineInputBorder(
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurface,
+                      ),
+                      maxLines: null,
+                      textInputAction: TextInputAction.send,
+                      onSubmitted: (_) => _sendMessage(),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: AppTheme.primaryGradient,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: _isLoading ? null : _sendMessage,
                         borderRadius: BorderRadius.circular(24),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 12,
-                      ),
-                    ),
-                    style: TextStyle(
-                      color: theme.colorScheme.onSurface,
-                    ),
-                    maxLines: null,
-                    textInputAction: TextInputAction.send,
-                    onSubmitted: (_) => _sendMessage(),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: AppTheme.primaryGradient,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: _isLoading ? null : _sendMessage,
-                      borderRadius: BorderRadius.circular(24),
-                      child: const Padding(
-                        padding: EdgeInsets.all(12),
-                        child: Icon(
-                          Icons.send,
-                          color: Colors.white,
-                          size: 20,
+                        child: const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: Icon(
+                            Icons.send,
+                            color: Colors.white,
+                            size: 20,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
         ],
       ),
     );

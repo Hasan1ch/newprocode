@@ -8,6 +8,7 @@ import 'package:procode/screens/dashboard/widgets/stats_card.dart';
 import 'package:procode/screens/dashboard/widgets/continue_learning_card.dart';
 import 'package:procode/screens/dashboard/widgets/daily_challenge_card.dart';
 import 'package:procode/screens/courses/courses_list_screen.dart';
+import 'package:procode/screens/ai_advisor/ai_advisor_screen.dart';
 import 'package:procode/screens/code_editor/code_editor_screen.dart';
 import 'package:procode/screens/quiz/quiz_categories_screen.dart';
 import 'package:procode/screens/profile/profile_screen.dart';
@@ -27,6 +28,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final List<Widget> _screens = [
     const HomeTab(),
     const CoursesListScreen(),
+    const AIAdvisorScreen(),
     const CodeEditorScreen(),
     const QuizCategoriesScreen(),
     const ProfileScreen(),
@@ -119,9 +121,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 _buildNavItem(Icons.home_rounded, 'Home', 0),
                 _buildNavItem(Icons.book_rounded, 'Courses', 1),
-                _buildNavItem(Icons.code_rounded, 'Practice', 2),
-                _buildNavItem(Icons.quiz_rounded, 'Quiz', 3),
-                _buildNavItem(Icons.person_rounded, 'Profile', 4),
+                _buildNavItem(Icons.auto_awesome_rounded, 'AI', 2),
+                _buildNavItem(Icons.code_rounded, 'Practice', 3),
+                _buildNavItem(Icons.quiz_rounded, 'Quiz', 4),
+                _buildNavItem(Icons.person_rounded, 'Profile', 5),
               ],
             ),
           ),
@@ -139,7 +142,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       onTap: () => setState(() => _selectedIndex = index),
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -149,7 +152,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               label,
               style: TextStyle(
                 color: color,
-                fontSize: 12,
+                fontSize: 11,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
               ),
             ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:procode/models/code_challenge_model.dart';
 import 'package:procode/services/gemini_service.dart';
 import 'package:procode/config/theme.dart';
+import 'package:procode/config/app_colors.dart';
 
 class AIAssistantPanel extends StatefulWidget {
   final String code;
@@ -26,6 +27,7 @@ class AIAssistantPanel extends StatefulWidget {
 class _AIAssistantPanelState extends State<AIAssistantPanel> {
   final GeminiService _geminiService = GeminiService();
   final TextEditingController _queryController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
 
   final List<Map<String, String>> _messages = [];
   bool _isLoading = false;
@@ -69,7 +71,7 @@ class _AIAssistantPanelState extends State<AIAssistantPanel> {
       _messages.add({
         'role': 'assistant',
         'content':
-            'Hi! I\'m your AI coding assistant. I can help you understand, debug, and improve your code. What would you like help with?',
+            'Hi! I\'m your AI coding assistant. I can help you understand, debug, and improve your ${widget.language} code. What would you like help with?',
       });
     });
   }
@@ -86,6 +88,7 @@ class _AIAssistantPanelState extends State<AIAssistantPanel> {
     });
 
     _queryController.clear();
+    _scrollToBottom();
 
     try {
       // Build the question with context
@@ -107,24 +110,39 @@ Description: ${widget.challenge!.description}
         language: widget.language,
       );
 
-      setState(() {
-        _messages.add({
-          'role': 'assistant',
-          'content': response,
+      if (mounted) {
+        setState(() {
+          _messages.add({
+            'role': 'assistant',
+            'content': response,
+          });
+          _isLoading = false;
         });
-      });
+        _scrollToBottom();
+      }
     } catch (e) {
-      setState(() {
-        _messages.add({
-          'role': 'assistant',
-          'content': 'Sorry, I encountered an error. Please try again.',
+      if (mounted) {
+        setState(() {
+          _messages.add({
+            'role': 'assistant',
+            'content': 'Sorry, I encountered an error. Please try again.',
+          });
+          _isLoading = false;
         });
-      });
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      }
     }
+  }
+
+  void _scrollToBottom() {
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
   Future<void> _handleQuickAction(Map<String, dynamic> action) async {
@@ -143,12 +161,17 @@ Description: ${widget.challenge!.description}
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Container(
       width: 400,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         border: Border(
-          left: BorderSide(color: Colors.grey[300]!),
+          left: BorderSide(
+            color: theme.colorScheme.surfaceVariant,
+          ),
         ),
       ),
       child: Column(
@@ -157,12 +180,12 @@ Description: ${widget.challenge!.description}
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppTheme.primaryColor,
-              boxShadow: const [
+              gradient: AppTheme.primaryGradient,
+              boxShadow: [
                 BoxShadow(
-                  color: Colors.black12,
-                  blurRadius: 2,
-                  offset: Offset(0, 1),
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
@@ -194,9 +217,11 @@ Description: ${widget.challenge!.description}
             height: 80,
             padding: const EdgeInsets.symmetric(vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.grey[50],
+              color: theme.colorScheme.surfaceVariant.withOpacity(0.5),
               border: Border(
-                bottom: BorderSide(color: Colors.grey[200]!),
+                bottom: BorderSide(
+                  color: theme.colorScheme.surfaceVariant,
+                ),
               ),
             ),
             child: ListView.builder(
@@ -213,21 +238,25 @@ Description: ${widget.challenge!.description}
                     avatar: Icon(
                       action['icon'],
                       size: 18,
-                      color: isSelected ? Colors.white : AppTheme.primaryColor,
+                      color:
+                          isSelected ? Colors.white : theme.colorScheme.primary,
                     ),
                     label: Text(
                       action['label'],
                       style: TextStyle(
-                        color: isSelected ? Colors.white : Colors.black87,
+                        color: isSelected
+                            ? Colors.white
+                            : theme.colorScheme.onSurface,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    backgroundColor:
-                        isSelected ? AppTheme.primaryColor : Colors.white,
+                    backgroundColor: isSelected
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.surface,
                     side: BorderSide(
                       color: isSelected
-                          ? AppTheme.primaryColor
-                          : Colors.grey[300]!,
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.surfaceVariant,
                     ),
                     onPressed: () => _handleQuickAction(action),
                   ),
@@ -239,6 +268,7 @@ Description: ${widget.challenge!.description}
           // Messages
           Expanded(
             child: ListView.builder(
+              controller: _scrollController,
               padding: const EdgeInsets.all(16),
               itemCount: _messages.length,
               itemBuilder: (context, index) {
@@ -256,7 +286,7 @@ Description: ${widget.challenge!.description}
                       if (!isUser) ...[
                         CircleAvatar(
                           radius: 16,
-                          backgroundColor: AppTheme.primaryColor,
+                          backgroundColor: theme.colorScheme.primary,
                           child: const Icon(
                             Icons.auto_awesome,
                             size: 16,
@@ -269,15 +299,18 @@ Description: ${widget.challenge!.description}
                         child: Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
+                            gradient: isUser ? AppTheme.primaryGradient : null,
                             color: isUser
-                                ? AppTheme.primaryColor
-                                : Colors.grey[100],
+                                ? null
+                                : theme.colorScheme.surfaceVariant,
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Text(
+                          child: SelectableText(
                             message['content']!,
                             style: TextStyle(
-                              color: isUser ? Colors.white : Colors.black87,
+                              color: isUser
+                                  ? Colors.white
+                                  : theme.colorScheme.onSurface,
                               fontSize: 14,
                               height: 1.4,
                             ),
@@ -288,11 +321,11 @@ Description: ${widget.challenge!.description}
                         const SizedBox(width: 8),
                         CircleAvatar(
                           radius: 16,
-                          backgroundColor: Colors.grey[300],
+                          backgroundColor: theme.colorScheme.surfaceVariant,
                           child: Icon(
                             Icons.person,
                             size: 16,
-                            color: Colors.grey[600],
+                            color: theme.colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ],
@@ -314,7 +347,7 @@ Description: ${widget.challenge!.description}
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
                       valueColor: AlwaysStoppedAnimation<Color>(
-                        AppTheme.primaryColor,
+                        theme.colorScheme.primary,
                       ),
                     ),
                   ),
@@ -322,7 +355,7 @@ Description: ${widget.challenge!.description}
                   Text(
                     'AI is thinking...',
                     style: TextStyle(
-                      color: Colors.grey[600],
+                      color: theme.colorScheme.onSurfaceVariant,
                       fontSize: 14,
                     ),
                   ),
@@ -334,9 +367,11 @@ Description: ${widget.challenge!.description}
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: theme.colorScheme.surface,
               border: Border(
-                top: BorderSide(color: Colors.grey[200]!),
+                top: BorderSide(
+                  color: theme.colorScheme.surfaceVariant,
+                ),
               ),
             ),
             child: Row(
@@ -346,13 +381,23 @@ Description: ${widget.challenge!.description}
                     controller: _queryController,
                     decoration: InputDecoration(
                       hintText: 'Ask me anything about your code...',
+                      hintStyle: TextStyle(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      filled: true,
+                      fillColor:
+                          theme.colorScheme.surfaceVariant.withOpacity(0.5),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(24),
+                        borderSide: BorderSide.none,
                       ),
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 12,
                       ),
+                    ),
+                    style: TextStyle(
+                      color: theme.colorScheme.onSurface,
                     ),
                     maxLines: null,
                     textInputAction: TextInputAction.send,
@@ -360,12 +405,28 @@ Description: ${widget.challenge!.description}
                   ),
                 ),
                 const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.send),
-                  onPressed: _isLoading
-                      ? null
-                      : () => _sendMessage(_queryController.text),
-                  color: AppTheme.primaryColor,
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: AppTheme.primaryGradient,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: _isLoading
+                          ? null
+                          : () => _sendMessage(_queryController.text),
+                      borderRadius: BorderRadius.circular(24),
+                      child: const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: Icon(
+                          Icons.send,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -378,6 +439,7 @@ Description: ${widget.challenge!.description}
   @override
   void dispose() {
     _queryController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 }

@@ -245,13 +245,13 @@ class _LoginScreenState extends State<LoginScreen>
           width: 100,
           height: 100,
           decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.1),
+            color: const Color.fromARGB(255, 255, 255, 255).withOpacity(0.4),
             shape: BoxShape.circle,
           ),
           child: const Icon(
             Icons.code,
             size: 50,
-            color: AppColors.primary,
+            color: Color.fromARGB(255, 255, 255, 255),
           ),
         ),
 
@@ -271,7 +271,7 @@ class _LoginScreenState extends State<LoginScreen>
         Text(
           'Login to continue your learning journey',
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: AppColors.textSecondary,
+                color: const Color.fromARGB(255, 180, 172, 189),
               ),
           textAlign: TextAlign.center,
         ),
@@ -320,7 +320,7 @@ class _LoginScreenState extends State<LoginScreen>
           child: Text(
             'Forgot Password?',
             style: TextStyle(
-              color: AppColors.primary,
+              color: const Color.fromARGB(255, 255, 255, 255),
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -365,6 +365,7 @@ class _LoginScreenState extends State<LoginScreen>
       width: double.infinity,
       icon: const FaIcon(
         FontAwesomeIcons.google,
+        color: Color.fromARGB(255, 226, 51, 8),
         size: 20,
       ),
     );
@@ -387,7 +388,7 @@ class _LoginScreenState extends State<LoginScreen>
           child: Text(
             'Sign Up',
             style: TextStyle(
-              color: AppColors.primary,
+              color: const Color.fromARGB(255, 255, 255, 255),
               fontWeight: FontWeight.bold,
             ),
           ),

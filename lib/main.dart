@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'package:procode/config/theme.dart';
 import 'package:procode/firebase_options.dart';
@@ -25,14 +26,47 @@ import 'package:procode/screens/leaderboard/leaderboard_screen.dart';
 import 'package:procode/screens/settings/settings_screen.dart';
 import 'package:procode/screens/code_editor/code_editor_screen.dart';
 import 'package:procode/screens/quiz/quiz_categories_screen.dart';
+import 'package:procode/screens/ai_advisor/ai_advisor_screen.dart';
+import 'package:procode/utils/app_logger.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Load environment variables
+  try {
+    await dotenv.load(fileName: ".env");
+    AppLogger.info('Environment loaded successfully');
+
+    // Verify critical environment variables
+    final geminiKey = dotenv.env['GEMINI_API_KEY'];
+    final judge0Key = dotenv.env['JUDGE0_API_KEY'];
+
+    if (geminiKey == null || geminiKey.isEmpty) {
+      AppLogger.error('GEMINI_API_KEY is missing in .env file');
+    } else {
+      AppLogger.info('GEMINI_API_KEY loaded successfully');
+    }
+
+    if (judge0Key == null || judge0Key.isEmpty) {
+      AppLogger.error('JUDGE0_API_KEY is missing in .env file');
+    } else {
+      AppLogger.info('JUDGE0_API_KEY loaded successfully');
+    }
+  } catch (e) {
+    AppLogger.error('Failed to load .env file', error: e);
+    // Continue running the app even if .env fails to load
+    // The app will use fallback responses for AI features
+  }
+
   // Initialize Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    AppLogger.info('Firebase initialized successfully');
+  } catch (e) {
+    AppLogger.error('Failed to initialize Firebase', error: e);
+  }
 
   // Configure Firestore for optimal performance
   FirebaseFirestore.instance.settings = const Settings(
@@ -85,6 +119,7 @@ class ProCodeApp extends StatelessWidget {
               Routes.leaderboard: (context) => const LeaderboardScreen(),
               Routes.profile: (context) => const ProfileScreen(),
               Routes.settings: (context) => const SettingsScreen(),
+              Routes.aiAdvisor: (context) => const AIAdvisorScreen(),
             },
             onUnknownRoute: (settings) {
               return MaterialPageRoute(
