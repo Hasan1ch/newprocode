@@ -3,6 +3,8 @@ import 'package:procode/models/module_model.dart';
 import 'package:procode/screens/courses/module_screen.dart';
 import 'package:procode/config/app_colors.dart';
 
+/// Expandable module card that displays course module information
+/// Shows completion status, lesson count, and provides access to module content
 class ModuleCard extends StatefulWidget {
   final Module module;
   final String courseId;
@@ -34,6 +36,7 @@ class _ModuleCardState extends State<ModuleCard>
   @override
   void initState() {
     super.initState();
+    // Initialize smooth expansion animation for better UX
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
@@ -50,6 +53,7 @@ class _ModuleCardState extends State<ModuleCard>
     super.dispose();
   }
 
+  /// Toggles the expanded state with smooth animation
   void _toggleExpand() {
     setState(() {
       _isExpanded = !_isExpanded;
@@ -63,6 +67,7 @@ class _ModuleCardState extends State<ModuleCard>
 
   @override
   Widget build(BuildContext context) {
+    // Calculate progress as a fraction for the progress bar
     final progress = widget.totalLessons > 0
         ? (widget.completedLessons / widget.totalLessons)
         : 0.0;
@@ -71,6 +76,7 @@ class _ModuleCardState extends State<ModuleCard>
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
+        // Visual indicators for module status through border colors
         border: Border.all(
           color: widget.isCompleted
               ? Colors.green.withOpacity(0.3)
@@ -81,6 +87,7 @@ class _ModuleCardState extends State<ModuleCard>
       ),
       child: Column(
         children: [
+          // Main module header - always visible
           InkWell(
             onTap: widget.isLocked ? null : _toggleExpand,
             borderRadius: BorderRadius.circular(16),
@@ -90,10 +97,12 @@ class _ModuleCardState extends State<ModuleCard>
                 children: [
                   Row(
                     children: [
+                      // Module status icon container
                       Container(
                         width: 50,
                         height: 50,
                         decoration: BoxDecoration(
+                          // Different colors indicate module status
                           color: widget.isCompleted
                               ? Colors.green.withOpacity(0.2)
                               : widget.isLocked
@@ -102,6 +111,7 @@ class _ModuleCardState extends State<ModuleCard>
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Center(
+                          // Show appropriate icon based on module state
                           child: widget.isCompleted
                               ? const Icon(
                                   Icons.check_circle,
@@ -125,6 +135,7 @@ class _ModuleCardState extends State<ModuleCard>
                         ),
                       ),
                       const SizedBox(width: 16),
+                      // Module information section
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -132,6 +143,7 @@ class _ModuleCardState extends State<ModuleCard>
                             Text(
                               widget.module.title,
                               style: TextStyle(
+                                // Grey out locked modules
                                 color: widget.isLocked
                                     ? Colors.grey
                                     : Colors.white,
@@ -140,6 +152,7 @@ class _ModuleCardState extends State<ModuleCard>
                               ),
                             ),
                             const SizedBox(height: 4),
+                            // Module metadata - lessons and estimated time
                             Row(
                               children: [
                                 Icon(
@@ -174,6 +187,7 @@ class _ModuleCardState extends State<ModuleCard>
                           ],
                         ),
                       ),
+                      // Animated expand/collapse indicator
                       AnimatedRotation(
                         duration: const Duration(milliseconds: 300),
                         turns: _isExpanded ? 0.5 : 0,
@@ -186,6 +200,7 @@ class _ModuleCardState extends State<ModuleCard>
                       ),
                     ],
                   ),
+                  // Progress tracking section for unlocked modules with progress
                   if (!widget.isLocked && progress > 0) ...[
                     const SizedBox(height: 12),
                     Column(
@@ -210,6 +225,7 @@ class _ModuleCardState extends State<ModuleCard>
                           ],
                         ),
                         const SizedBox(height: 8),
+                        // Visual progress indicator
                         ClipRRect(
                           borderRadius: BorderRadius.circular(4),
                           child: LinearProgressIndicator(
@@ -230,7 +246,7 @@ class _ModuleCardState extends State<ModuleCard>
               ),
             ),
           ),
-          // Expandable Content
+          // Expandable content section with smooth animation
           SizeTransition(
             sizeFactor: _expandAnimation,
             child: Container(
@@ -239,12 +255,14 @@ class _ModuleCardState extends State<ModuleCard>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Divider between header and expanded content
                   Container(
                     width: double.infinity,
                     height: 1,
                     color: Colors.grey[800],
                     margin: const EdgeInsets.only(bottom: 16),
                   ),
+                  // Module description text
                   Text(
                     widget.module.description,
                     style: TextStyle(
@@ -254,12 +272,14 @@ class _ModuleCardState extends State<ModuleCard>
                     ),
                   ),
                   const SizedBox(height: 16),
+                  // Action button to view module lessons
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: widget.isLocked
                           ? null
                           : () {
+                              // Navigate to module lessons screen
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
