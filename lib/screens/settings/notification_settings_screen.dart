@@ -3,6 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:procode/services/notification_service.dart';
 import 'package:procode/widgets/common/loading_widget.dart';
 
+/// Notification settings screen for managing in-app notification preferences
+/// Currently stores preferences for future push notification implementation
 class NotificationSettingsScreen extends StatefulWidget {
   const NotificationSettingsScreen({super.key});
 
@@ -15,6 +17,7 @@ class _NotificationSettingsScreenState
     extends State<NotificationSettingsScreen> {
   final NotificationService _notificationService = NotificationService();
 
+  // Notification preference flags
   late bool _achievementNotifications;
   late bool _dailyReminders;
   late bool _streakReminders;
@@ -26,13 +29,16 @@ class _NotificationSettingsScreenState
   @override
   void initState() {
     super.initState();
+    // Load saved notification preferences
     _loadSettings();
   }
 
+  /// Loads notification preferences from local storage
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
 
     setState(() {
+      // Load each preference with default values
       _achievementNotifications =
           prefs.getBool('achievement_notifications') ?? true;
       _dailyReminders = prefs.getBool('daily_reminders') ?? true;
@@ -40,6 +46,7 @@ class _NotificationSettingsScreenState
       _weeklyProgress = prefs.getBool('weekly_progress') ?? true;
       _courseUpdates = prefs.getBool('course_updates') ?? true;
 
+      // Load daily reminder time, default to 8:00 PM
       final hour = prefs.getInt('daily_reminder_hour') ?? 20;
       final minute = prefs.getInt('daily_reminder_minute') ?? 0;
       _dailyReminderTime = TimeOfDay(hour: hour, minute: minute);
@@ -48,12 +55,15 @@ class _NotificationSettingsScreenState
     });
   }
 
+  /// Saves notification preferences to local storage
+  /// Note: Actual push notifications would be scheduled here in production
   Future<void> _saveSettings() async {
     setState(() => _isLoading = true);
 
     try {
       final prefs = await SharedPreferences.getInstance();
 
+      // Save all notification preferences
       await prefs.setBool(
           'achievement_notifications', _achievementNotifications);
       await prefs.setBool('daily_reminders', _dailyReminders);
@@ -69,12 +79,14 @@ class _NotificationSettingsScreenState
       // flutter_local_notifications or Firebase Cloud Messaging
 
       if (mounted) {
+        // Show success notification
         _notificationService.showSuccessNotification(
           'Notification settings saved successfully',
         );
       }
     } catch (e) {
       if (mounted) {
+        // Show error notification
         _notificationService.showErrorNotification(
           'Failed to save settings: ${e.toString()}',
         );
@@ -86,6 +98,7 @@ class _NotificationSettingsScreenState
     }
   }
 
+  /// Shows time picker for daily reminder time selection
   Future<void> _selectTime() async {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
@@ -111,7 +124,7 @@ class _NotificationSettingsScreenState
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                // Notification Info Card
+                // Notification Info Card - explains current limitations
                 Card(
                   color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   child: Padding(
@@ -149,7 +162,7 @@ class _NotificationSettingsScreenState
                 ),
                 const SizedBox(height: 16),
 
-                // Learning Notifications
+                // Learning Notifications section
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
@@ -161,6 +174,7 @@ class _NotificationSettingsScreenState
                           style: Theme.of(context).textTheme.titleLarge,
                         ),
                         const SizedBox(height: 16),
+                        // Achievement notifications toggle
                         SwitchListTile(
                           title: const Text('Achievement Notifications'),
                           subtitle: const Text(
@@ -172,6 +186,7 @@ class _NotificationSettingsScreenState
                           },
                         ),
                         const Divider(),
+                        // Daily reminder toggle
                         SwitchListTile(
                           title: const Text('Daily Reminders'),
                           subtitle: const Text(
@@ -182,6 +197,7 @@ class _NotificationSettingsScreenState
                             setState(() => _dailyReminders = value);
                           },
                         ),
+                        // Show time picker when daily reminders are enabled
                         if (_dailyReminders) ...[
                           ListTile(
                             title: const Text('Reminder Time'),
@@ -193,6 +209,7 @@ class _NotificationSettingsScreenState
                           ),
                         ],
                         const Divider(),
+                        // Streak reminder toggle
                         SwitchListTile(
                           title: const Text('Streak Reminders'),
                           subtitle: const Text(
@@ -209,7 +226,7 @@ class _NotificationSettingsScreenState
                 ),
                 const SizedBox(height: 16),
 
-                // Progress Updates
+                // Progress Updates section
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
@@ -221,6 +238,7 @@ class _NotificationSettingsScreenState
                           style: Theme.of(context).textTheme.titleLarge,
                         ),
                         const SizedBox(height: 16),
+                        // Weekly progress report toggle
                         SwitchListTile(
                           title: const Text('Weekly Progress Report'),
                           subtitle: const Text(
@@ -232,6 +250,7 @@ class _NotificationSettingsScreenState
                           },
                         ),
                         const Divider(),
+                        // Course updates toggle
                         SwitchListTile(
                           title: const Text('Course Updates'),
                           subtitle: const Text(
@@ -248,7 +267,7 @@ class _NotificationSettingsScreenState
                 ),
                 const SizedBox(height: 16),
 
-                // Notification Preview
+                // Notification Preview section - allows testing notifications
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
@@ -260,6 +279,7 @@ class _NotificationSettingsScreenState
                           style: Theme.of(context).textTheme.titleLarge,
                         ),
                         const SizedBox(height: 16),
+                        // Achievement notification preview
                         ListTile(
                           leading: const Icon(Icons.emoji_events),
                           title: const Text('Achievement Notification'),
@@ -271,6 +291,7 @@ class _NotificationSettingsScreenState
                           },
                         ),
                         const Divider(),
+                        // Streak notification preview
                         ListTile(
                           leading: const Icon(Icons.local_fire_department),
                           title: const Text('Streak Notification'),
@@ -280,6 +301,7 @@ class _NotificationSettingsScreenState
                           },
                         ),
                         const Divider(),
+                        // XP notification preview
                         ListTile(
                           leading: const Icon(Icons.star),
                           title: const Text('XP Notification'),
