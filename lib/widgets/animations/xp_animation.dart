@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 
+/// Animated XP gain notification with particle effects
+/// Creates a rewarding visual feedback when users earn experience points
+/// The particle system adds excitement to the gamification experience
 class XPAnimation extends StatefulWidget {
   final int xp;
   final VoidCallback? onComplete;
@@ -17,13 +20,15 @@ class XPAnimation extends StatefulWidget {
 
 class _XPAnimationState extends State<XPAnimation>
     with TickerProviderStateMixin {
-  late AnimationController _floatController;
-  late AnimationController _fadeController;
-  late AnimationController _scaleController;
+  // Multiple controllers for complex animation choreography
+  late AnimationController _floatController; // Upward movement
+  late AnimationController _fadeController; // Fade out
+  late AnimationController _scaleController; // Initial pop-in
   late Animation<double> _floatAnimation;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
 
+  // Particle system for celebratory effect
   final List<Particle> _particles = [];
   final _random = math.Random();
 
@@ -31,30 +36,34 @@ class _XPAnimationState extends State<XPAnimation>
   void initState() {
     super.initState();
 
-    // Initialize animations
+    // Float animation - makes XP text rise upward
     _floatController = AnimationController(
       duration: Duration(seconds: 2),
       vsync: this,
     );
 
+    // Fade animation - gradually disappears
     _fadeController = AnimationController(
       duration: Duration(milliseconds: 500),
       vsync: this,
     );
 
+    // Scale animation - elastic entrance
     _scaleController = AnimationController(
       duration: Duration(milliseconds: 300),
       vsync: this,
     );
 
+    // Configure float to move upward
     _floatAnimation = Tween<double>(
       begin: 0,
-      end: -100,
+      end: -100, // Move up 100 pixels
     ).animate(CurvedAnimation(
       parent: _floatController,
-      curve: Curves.easeOut,
+      curve: Curves.easeOut, // Decelerate as it rises
     ));
 
+    // Fade out during last 30% of animation
     _fadeAnimation = Tween<double>(
       begin: 1,
       end: 0,
@@ -63,35 +72,39 @@ class _XPAnimationState extends State<XPAnimation>
       curve: Interval(0.7, 1.0, curve: Curves.easeIn),
     ));
 
+    // Bouncy scale entrance
     _scaleAnimation = Tween<double>(
       begin: 0,
       end: 1,
     ).animate(CurvedAnimation(
       parent: _scaleController,
-      curve: Curves.elasticOut,
+      curve: Curves.elasticOut, // Bouncy effect
     ));
 
-    // Generate particles
+    // Generate particle burst
     _generateParticles();
 
-    // Start animations
+    // Start animation sequence
     _scaleController.forward();
     _floatController.forward();
     _fadeController.forward().then((_) {
+      // Notify completion after animations finish
       if (widget.onComplete != null) {
         widget.onComplete!();
       }
     });
   }
 
+  /// Creates random particles for explosion effect
+  /// Each particle has random properties for variety
   void _generateParticles() {
     for (int i = 0; i < 10; i++) {
       _particles.add(Particle(
-        x: _random.nextDouble() * 100 - 50,
-        y: _random.nextDouble() * 100 - 50,
-        size: _random.nextDouble() * 4 + 2,
+        x: _random.nextDouble() * 100 - 50, // Random X position
+        y: _random.nextDouble() * 100 - 50, // Random Y position
+        size: _random.nextDouble() * 4 + 2, // Size between 2-6
         color: Colors.primaries[_random.nextInt(Colors.primaries.length)],
-        speed: _random.nextDouble() * 2 + 1,
+        speed: _random.nextDouble() * 2 + 1, // Speed multiplier
       ));
     }
   }
@@ -107,9 +120,11 @@ class _XPAnimationState extends State<XPAnimation>
   @override
   Widget build(BuildContext context) {
     return Positioned(
+      // Center on screen
       top: MediaQuery.of(context).size.height / 2,
       left: MediaQuery.of(context).size.width / 2,
       child: AnimatedBuilder(
+        // Listen to all animations
         animation: Listenable.merge([
           _floatAnimation,
           _fadeAnimation,
@@ -117,20 +132,21 @@ class _XPAnimationState extends State<XPAnimation>
         ]),
         builder: (context, child) {
           return Transform.translate(
-            offset: Offset(0, _floatAnimation.value),
+            offset: Offset(0, _floatAnimation.value), // Float upward
             child: Opacity(
-              opacity: _fadeAnimation.value,
+              opacity: _fadeAnimation.value, // Fade out
               child: Transform.scale(
-                scale: _scaleAnimation.value,
+                scale: _scaleAnimation.value, // Scale in
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    // Particles
+                    // Particle explosion effect
                     ..._particles.map((particle) {
+                      // Calculate particle position based on animation progress
                       final progress = _floatController.value;
                       final x = particle.x * progress * particle.speed;
                       final y = particle.y * progress * particle.speed;
-                      final opacity = 1 - progress;
+                      final opacity = 1 - progress; // Fade as they spread
 
                       return Transform.translate(
                         offset: Offset(x, y),
@@ -145,11 +161,12 @@ class _XPAnimationState extends State<XPAnimation>
                       );
                     }),
 
-                    // Main XP text
+                    // Main XP badge
                     Container(
                       padding:
                           EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                       decoration: BoxDecoration(
+                        // Golden gradient for XP
                         gradient: LinearGradient(
                           colors: [
                             Colors.amber.shade600,
@@ -205,12 +222,14 @@ class _XPAnimationState extends State<XPAnimation>
   }
 }
 
+/// Particle data model for explosion effect
+/// Each particle moves independently with its own properties
 class Particle {
-  final double x;
-  final double y;
-  final double size;
-  final Color color;
-  final double speed;
+  final double x; // X direction
+  final double y; // Y direction
+  final double size; // Particle size
+  final Color color; // Particle color
+  final double speed; // Movement speed multiplier
 
   Particle({
     required this.x,
