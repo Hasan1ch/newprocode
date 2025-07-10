@@ -1,0 +1,12 @@
+specVersion: "v1"
+serviceId: "newprocode"
+location: "europe-west1"
+schema:
+  source: "./schema"
+  datasource:
+    postgresql:
+      database: "fdcdb"
+      cloudSql:
+        instanceId: "newprocode-fdc"
+      # schemaValidation: "COMPATIBLE"
+connectorDirs: ["./connector"]

@@ -1,0 +1,60 @@
+type User @table {
+  displayName: String!
+  email: String!
+  createdAt: Timestamp!
+  photoUrl: String
+  lastActivityAt: Timestamp
+  learningGoals: String
+}
+
+type Course @table {
+  title: String!
+  description: String!
+  language: String!
+  difficultyLevel: String!
+  createdAt: Timestamp!
+  imageUrl: String
+  estimatedCompletionTime: Int
+}
+
+type Lesson @table {
+  course: Course!
+  title: String!
+  content: String!
+  orderIndex: Int!
+  lessonType: String!
+  createdAt: Timestamp!
+  summary: String
+}
+
+type Exercise @table {
+  lesson: Lesson!
+  title: String!
+  description: String!
+  exerciseType: String!
+  createdAt: Timestamp!
+  starterCode: String
+  testCases: String
+  correctAnswer: String
+}
+
+type UserEnrollment @table(key: ["user", "course"]) {
+  user: User!
+  course: Course!
+  enrollmentDate: Timestamp!
+  status: String!
+  completionDate: Timestamp
+  progressPercentage: Float
+  lastAccessedLessonId: UUID
+}
+
+type UserSubmission @table {
+  user: User!
+  exercise: Exercise!
+  submissionDate: Timestamp!
+  isCorrect: Boolean!
+  submittedCode: String
+  aiFeedback: String
+  aiExplanation: String
+  attemptNumber: Int
+}

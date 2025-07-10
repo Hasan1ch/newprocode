@@ -1,0 +1,308 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===== HELPER FUNCTIONS =====
+    
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Check if user owns the document
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Check if user is admin (you can modify this based on your admin system)
+    function isAdmin() {
+      return isAuthenticated() && 
+        request.auth.token.admin == true;
+    }
+    
+    // Check if a field exists in the request
+    function fieldExists(field) {
+      return field in request.resource.data;
+    }
+    
+    // ===== USERS COLLECTION =====
+    match /users/{userId} {
+      // Allow all authenticated users to read (needed for leaderboard)
+      allow read: if isAuthenticated();
+      
+      // Only user can create their own document
+      allow create: if isOwner(userId) &&
+        // Ensure required fields are present
+        fieldExists('username') &&
+        fieldExists('email') &&
+        fieldExists('displayName') &&
+        fieldExists('totalXP') &&
+        fieldExists('level') &&
+        fieldExists('privacySettings') &&
+        // Ensure initial values are correct
+        request.resource.data.totalXP == 0 &&
+        request.resource.data.level == 1;
+      
+      // Only user can update their own document
+      allow update: if isOwner(userId);
+      
+      // Only user can delete their own document
+      allow delete: if isOwner(userId);
+    }
+    
+    // ===== USERNAMES COLLECTION =====
+    match /usernames/{username} {
+      // Anyone can check username availability
+      allow read: if true;
+      
+      // Authenticated users can reserve a username
+      allow create: if isAuthenticated() &&
+        request.resource.data.uid == request.auth.uid &&
+        fieldExists('uid') &&
+        fieldExists('reservedAt');
+      
+      // Only the owner can update their username reservation
+      allow update: if isAuthenticated() && 
+        resource.data.uid == request.auth.uid &&
+        request.resource.data.uid == request.auth.uid;
+      
+      // Only the owner can release their username
+      allow delete: if isAuthenticated() && 
+        resource.data.uid == request.auth.uid;
+    }
+    
+    // ===== USER STATS COLLECTION =====
+    match /user_stats/{userId} {
+      // Allow authenticated users to read (needed for weekly/monthly leaderboard)
+      allow read: if isAuthenticated();
+      
+      // Only user can write their own stats
+      allow create: if isOwner(userId);
+      
+      // Only user can update their own stats
+      allow update: if isOwner(userId);
+      
+      // Only user can delete their own stats
+      allow delete: if isOwner(userId);
+    }
+    
+    // ===== PROGRESS COLLECTION - FIXED =====
+    match /progress/{progressId} {
+      // Allow all authenticated users to read progress documents
+      // This is needed for the real-time listener to work properly
+      allow read: if isAuthenticated();
+      
+      // Users can create their own progress
+      allow create: if isAuthenticated() && 
+        request.resource.data.userId == request.auth.uid &&
+        fieldExists('userId') &&
+        fieldExists('courseId');
+      
+      // Users can update their own progress
+      allow update: if isAuthenticated() && 
+        resource.data.userId == request.auth.uid &&
+        request.resource.data.userId == request.auth.uid;
+      
+      // Users can delete their own progress
+      allow delete: if isAuthenticated() && 
+        resource.data.userId == request.auth.uid;
+    }
+    
+    // ===== COURSES COLLECTION =====
+    match /courses/{courseId} {
+      // All authenticated users can read courses
+      allow read: if isAuthenticated();
+      
+      // Only admins can write courses
+      allow write: if isAdmin();
+    }
+    
+    // ===== MODULES COLLECTION =====
+    match /modules/{moduleId} {
+      // All authenticated users can read modules
+      allow read: if isAuthenticated();
+      
+      // Only admins can write modules
+      allow write: if isAdmin();
+    }
+    
+    // ===== LESSONS COLLECTION =====
+    match /lessons/{lessonId} {
+      // All authenticated users can read lessons
+      allow read: if isAuthenticated();
+      
+      // Only admins can write lessons
+      allow write: if isAdmin();
+    }
+    
+    // ===== QUIZZES COLLECTION =====
+    match /quizzes/{quizId} {
+      // All authenticated users can read quizzes
+      allow read: if isAuthenticated();
+      
+      // Only admins can write quizzes
+      allow write: if isAdmin();
+      
+      // Quiz questions subcollection
+      match /questions/{questionId} {
+        allow read: if isAuthenticated();
+        allow write: if isAdmin();
+      }
+    }
+    
+    // ===== QUIZ RESULTS COLLECTION =====
+    match /quiz_results/{resultId} {
+      // Users can read their own results, admins can read all
+      allow read: if isAuthenticated() && 
+        (request.auth.uid == resource.data.userId || isAdmin());
+      
+      // Users can create their own results
+      allow create: if isAuthenticated() && 
+        request.auth.uid == request.resource.data.userId &&
+        fieldExists('userId') &&
+        fieldExists('quizId') &&
+        fieldExists('score') &&
+        fieldExists('completedAt');
+      
+      // Results cannot be updated once created
+      allow update: if false;
+      
+      // Results cannot be deleted
+      allow delete: if false;
+    }
+    
+    // ===== ACHIEVEMENTS COLLECTION =====
+    match /achievements/{achievementId} {
+      // All authenticated users can read achievements
+      allow read: if isAuthenticated();
+      
+      // Only admins can write achievements
+      allow write: if isAdmin();
+    }
+    
+    // ===== CODE CHALLENGES COLLECTION =====
+    match /code_challenges/{challengeId} {
+      // All authenticated users can read challenges
+      allow read: if isAuthenticated();
+      
+      // Only admins can write challenges
+      allow write: if isAdmin();
+    }
+    
+    // ===== CODE SUBMISSIONS COLLECTION =====
+    match /code_submissions/{submissionId} {
+      // Users can read their own submissions
+      allow read: if isAuthenticated() && 
+        request.auth.uid == resource.data.userId;
+      
+      // Users can create their own submissions
+      allow create: if isAuthenticated() && 
+        request.auth.uid == request.resource.data.userId &&
+        fieldExists('userId') &&
+        fieldExists('challengeId') &&
+        fieldExists('code') &&
+        fieldExists('submittedAt');
+      
+      // Submissions cannot be updated
+      allow update: if false;
+      
+      // Submissions cannot be deleted
+      allow delete: if false;
+    }
+    
+    // ===== LEADERBOARD COLLECTION (if you use it) =====
+    match /leaderboard/{document} {
+      // All authenticated users can read leaderboard
+      allow read: if isAuthenticated();
+      
+      // Only server-side functions should write to leaderboard
+      allow write: if false;
+    }
+    
+    // ===== NOTIFICATIONS COLLECTION =====
+    match /notifications/{notificationId} {
+      // Users can read their own notifications
+      allow read: if isAuthenticated() && 
+        request.auth.uid == resource.data.userId;
+      
+      // Only server can create notifications
+      allow create: if false;
+      
+      // Users can update their own notifications (mark as read)
+      allow update: if isAuthenticated() && 
+        resource.data.userId == request.auth.uid &&
+        // Only allow updating read status
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead', 'readAt']);
+      
+      // Users can delete their own notifications
+      allow delete: if isAuthenticated() && 
+        resource.data.userId == request.auth.uid;
+    }
+    
+    // ===== USER SETTINGS COLLECTION =====
+    match /user_settings/{userId} {
+      // Users can read their own settings
+      allow read: if isOwner(userId);
+      
+      // Users can write their own settings
+      allow write: if isOwner(userId);
+    }
+    
+    // ===== REPORTS COLLECTION (for reporting issues) =====
+    match /reports/{reportId} {
+      // Only admins can read reports
+      allow read: if isAdmin();
+      
+      // Authenticated users can create reports
+      allow create: if isAuthenticated() &&
+        request.resource.data.reportedBy == request.auth.uid &&
+        fieldExists('reportedBy') &&
+        fieldExists('type') &&
+        fieldExists('description') &&
+        fieldExists('createdAt');
+      
+      // Reports cannot be updated by users
+      allow update: if isAdmin();
+      
+      // Reports cannot be deleted by users
+      allow delete: if isAdmin();
+    }
+    
+    // ===== ACTIVITY LOGS COLLECTION =====
+    match /activity_logs/{logId} {
+      // Users can read their own activity logs
+      allow read: if isAuthenticated() && 
+        request.auth.uid == resource.data.userId;
+      
+      // Only server can write activity logs
+      allow write: if false;
+    }
+    
+    // ===== ANNOUNCEMENTS COLLECTION =====
+    match /announcements/{announcementId} {
+      // All authenticated users can read announcements
+      allow read: if isAuthenticated();
+      
+      // Only admins can write announcements
+      allow write: if isAdmin();
+    }
+    
+    // ===== FEEDBACK COLLECTION =====
+    match /feedback/{feedbackId} {
+      // Only admins can read feedback
+      allow read: if isAdmin();
+      
+      // Authenticated users can create feedback
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid &&
+        fieldExists('userId') &&
+        fieldExists('message') &&
+        fieldExists('createdAt');
+      
+      // Feedback cannot be updated
+      allow update: if false;
+      
+      // Only admins can delete feedback
+      allow delete: if isAdmin();
+    }
+  }
+}
