@@ -11,6 +11,8 @@ import 'package:procode/services/analytics_service.dart';
 import 'package:procode/screens/courses/widgets/lesson_progress_bar.dart';
 import 'package:procode/widgets/common/custom_app_bar.dart';
 
+/// Interactive lesson viewer with progress tracking and code examples
+/// Automatically tracks completion based on scroll position
 class LessonScreen extends StatefulWidget {
   final String courseId;
   final String moduleId;
@@ -30,17 +32,19 @@ class LessonScreen extends StatefulWidget {
 class _LessonScreenState extends State<LessonScreen> {
   final ScrollController _scrollController = ScrollController();
   final AnalyticsService _analyticsService = AnalyticsService();
-  double _scrollProgress = 0.0;
-  bool _isCompleted = false;
-  DateTime? _startTime;
+
+  // Progress tracking variables
+  double _scrollProgress = 0.0; // Current scroll position as percentage
+  bool _isCompleted = false; // Whether lesson is marked complete
+  DateTime? _startTime; // For tracking time spent on lesson
 
   @override
   void initState() {
     super.initState();
-    _startTime = DateTime.now();
+    _startTime = DateTime.now(); // Record when student started the lesson
     _scrollController.addListener(_updateScrollProgress);
-    _trackLessonView();
-    _checkIfCompleted();
+    _trackLessonView(); // Analytics tracking
+    _checkIfCompleted(); // Check if previously completed
   }
 
   @override
@@ -50,6 +54,8 @@ class _LessonScreenState extends State<LessonScreen> {
     super.dispose();
   }
 
+  /// Updates progress bar based on scroll position
+  /// Automatically completes lesson when scrolled to 95%
   void _updateScrollProgress() {
     if (_scrollController.hasClients) {
       final maxScroll = _scrollController.position.maxScrollExtent;
@@ -58,7 +64,7 @@ class _LessonScreenState extends State<LessonScreen> {
       setState(() {
         _scrollProgress = maxScroll > 0 ? (currentScroll / maxScroll) : 0;
 
-        // Mark as completed when scrolled to bottom
+        // Auto-complete when student has read most of the content
         if (_scrollProgress >= 0.95 && !_isCompleted) {
           _completeLesson();
         }
@@ -66,6 +72,7 @@ class _LessonScreenState extends State<LessonScreen> {
     }
   }
 
+  /// Checks if this lesson was previously completed
   void _checkIfCompleted() {
     final courseProvider = context.read<CourseProvider>();
     final progress = courseProvider.getProgressForCourse(widget.courseId);
@@ -73,6 +80,7 @@ class _LessonScreenState extends State<LessonScreen> {
         progress?.completedLessons.contains(widget.lesson.id) ?? false;
   }
 
+  /// Tracks lesson view for analytics purposes
   Future<void> _trackLessonView() async {
     final authProvider = context.read<app_auth.AuthProvider>();
     if (authProvider.user != null) {
@@ -85,8 +93,9 @@ class _LessonScreenState extends State<LessonScreen> {
     }
   }
 
+  /// Marks lesson as complete and awards XP
   Future<void> _completeLesson() async {
-    if (_isCompleted) return;
+    if (_isCompleted) return; // Prevent duplicate completions
 
     final courseProvider = context.read<CourseProvider>();
     final authProvider = context.read<app_auth.AuthProvider>();
@@ -95,12 +104,12 @@ class _LessonScreenState extends State<LessonScreen> {
       _isCompleted = true;
     });
 
-    // Calculate time spent
+    // Calculate time spent on lesson for analytics
     final timeSpent = _startTime != null
         ? DateTime.now().difference(_startTime!).inSeconds
         : 0;
 
-    // Track completion
+    // Track completion in analytics
     if (authProvider.user != null) {
       await _analyticsService.trackLessonCompletion(
         userId: authProvider.user!.id,
@@ -111,19 +120,20 @@ class _LessonScreenState extends State<LessonScreen> {
       );
     }
 
-    // Update progress
+    // Update course progress and award XP
     await courseProvider.completeLesson(
       widget.courseId,
       widget.moduleId,
       widget.lesson.id,
     );
 
-    // Show completion dialog
+    // Show success dialog with XP reward
     if (mounted) {
       _showCompletionDialog();
     }
   }
 
+  /// Shows celebration dialog when lesson is completed
   void _showCompletionDialog() {
     final theme = Theme.of(context);
 
@@ -138,6 +148,7 @@ class _LessonScreenState extends State<LessonScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Success icon with animation potential
             Container(
               width: 80,
               height: 80,
@@ -159,6 +170,7 @@ class _LessonScreenState extends State<LessonScreen> {
               ),
             ),
             const SizedBox(height: 8),
+            // XP reward display
             Text(
               '+${widget.lesson.xpReward} XP',
               style: TextStyle(
@@ -172,8 +184,8 @@ class _LessonScreenState extends State<LessonScreen> {
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.pop(context);
-              Navigator.pop(context);
+              Navigator.pop(context); // Close dialog
+              Navigator.pop(context); // Return to module
             },
             child: const Text('Continue'),
           ),
@@ -191,22 +203,23 @@ class _LessonScreenState extends State<LessonScreen> {
       appBar: CustomAppBar(
         title: widget.lesson.title,
         actions: [
+          // Bookmark icon for saving lessons (future feature)
           IconButton(
             icon: Icon(
               _isCompleted ? Icons.bookmark : Icons.bookmark_border,
               color: _isCompleted ? Colors.amber : null,
             ),
             onPressed: () {
-              // Toggle bookmark
+              // TODO: Implement bookmark functionality
             },
           ),
         ],
       ),
       body: Column(
         children: [
-          // Progress Bar
+          // Visual progress indicator at the top
           LessonProgressBar(progress: _scrollProgress),
-          // Content
+          // Main lesson content
           Expanded(
             child: SingleChildScrollView(
               controller: _scrollController,
@@ -214,7 +227,7 @@ class _LessonScreenState extends State<LessonScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Lesson Info
+                  // Lesson metadata card
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -247,10 +260,11 @@ class _LessonScreenState extends State<LessonScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  // Markdown Content
+                  // Markdown content with custom styling
                   MarkdownBody(
                     data: widget.lesson.content,
                     styleSheet: MarkdownStyleSheet(
+                      // Custom typography for better readability
                       h1: theme.textTheme.headlineLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -261,8 +275,9 @@ class _LessonScreenState extends State<LessonScreen> {
                         fontWeight: FontWeight.bold,
                       ),
                       p: theme.textTheme.bodyLarge?.copyWith(
-                        height: 1.6,
+                        height: 1.6, // Improved line spacing
                       ),
+                      // Code styling for inline code
                       code: TextStyle(
                         backgroundColor:
                             theme.colorScheme.surfaceContainerHighest,
@@ -284,10 +299,10 @@ class _LessonScreenState extends State<LessonScreen> {
                       ),
                     ),
                     builders: {
-                      'code': CodeBlockBuilder(),
+                      'code': CodeBlockBuilder(), // Custom code block renderer
                     },
                   ),
-                  // Code Examples
+                  // Code examples section
                   if (widget.lesson.codeExamples.isNotEmpty) ...[
                     const SizedBox(height: 32),
                     Text(
@@ -297,6 +312,7 @@ class _LessonScreenState extends State<LessonScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
+                    // Render each code example with syntax highlighting
                     ...widget.lesson.codeExamples.asMap().entries.map((entry) {
                       final index = entry.key;
                       final codeExample = entry.value;
@@ -305,13 +321,12 @@ class _LessonScreenState extends State<LessonScreen> {
                         child: _buildCodeExample(
                           title: 'Example ${index + 1}',
                           code: codeExample,
-                          language:
-                              'dart', // Default language, could be parsed from content
+                          language: 'dart', // TODO: Parse language from content
                         ),
                       );
                     }).toList(),
                   ],
-                  // Key Points
+                  // Key takeaways section
                   if (widget.lesson.keyPoints.isNotEmpty) ...[
                     const SizedBox(height: 32),
                     Text(
@@ -321,6 +336,7 @@ class _LessonScreenState extends State<LessonScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
+                    // Highlighted key points for quick review
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -359,7 +375,7 @@ class _LessonScreenState extends State<LessonScreen> {
                     ),
                   ],
                   const SizedBox(height: 32),
-                  // Complete Button
+                  // Manual completion button if not auto-completed
                   if (!_isCompleted)
                     SizedBox(
                       width: double.infinity,
@@ -390,6 +406,7 @@ class _LessonScreenState extends State<LessonScreen> {
     );
   }
 
+  /// Builds small info item widget for lesson metadata
   Widget _buildInfoItem(IconData icon, String value, String label,
       {Color? color}) {
     final theme = Theme.of(context);
@@ -416,6 +433,7 @@ class _LessonScreenState extends State<LessonScreen> {
     );
   }
 
+  /// Builds a code example widget with syntax highlighting and copy functionality
   Widget _buildCodeExample({
     required String title,
     required String code,
@@ -435,7 +453,7 @@ class _LessonScreenState extends State<LessonScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title Bar
+          // Code example header with title and language
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
@@ -456,6 +474,7 @@ class _LessonScreenState extends State<LessonScreen> {
                 ),
                 Row(
                   children: [
+                    // Language indicator
                     Text(
                       language.toUpperCase(),
                       style: theme.textTheme.bodySmall?.copyWith(
@@ -463,6 +482,7 @@ class _LessonScreenState extends State<LessonScreen> {
                       ),
                     ),
                     const SizedBox(width: 8),
+                    // Copy to clipboard button
                     IconButton(
                       icon: const Icon(Icons.copy, size: 18),
                       color: theme.colorScheme.onSurfaceVariant,
@@ -481,7 +501,7 @@ class _LessonScreenState extends State<LessonScreen> {
               ],
             ),
           ),
-          // Code
+          // Syntax highlighted code
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
@@ -501,14 +521,16 @@ class _LessonScreenState extends State<LessonScreen> {
   }
 }
 
+/// Custom markdown code block builder with syntax highlighting
 class CodeBlockBuilder extends MarkdownElementBuilder {
   @override
   Widget visitElementAfter(element, preferredStyle) {
     var language = '';
 
+    // Extract language from markdown code block
     if (element.attributes['class'] != null) {
       String lg = element.attributes['class'] as String;
-      language = lg.substring(9);
+      language = lg.substring(9); // Remove 'language-' prefix
     }
 
     return Container(
@@ -519,6 +541,7 @@ class CodeBlockBuilder extends MarkdownElementBuilder {
       ),
       child: Stack(
         children: [
+          // Syntax highlighted code content
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
@@ -532,6 +555,7 @@ class CodeBlockBuilder extends MarkdownElementBuilder {
               ),
             ),
           ),
+          // Copy button overlay
           Positioned(
             top: 8,
             right: 8,
