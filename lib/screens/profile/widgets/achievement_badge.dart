@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:procode/models/achievement_model.dart';
 
+/// Widget displaying an achievement badge with unlock status
+/// Shows different styles for locked vs unlocked achievements
 class AchievementBadge extends StatelessWidget {
   final Achievement achievement;
   final bool isUnlocked;
   final double size;
-  final bool showLabel;
+  final bool showLabel; // Whether to show achievement name below badge
 
   const AchievementBadge({
     super.key,
@@ -22,11 +24,13 @@ class AchievementBadge extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
+        // Achievement badge container
         Container(
           width: size,
           height: size,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
+            // Gradient for unlocked achievements, grey for locked
             gradient: isUnlocked
                 ? LinearGradient(
                     colors: [
@@ -40,6 +44,7 @@ class AchievementBadge extends StatelessWidget {
             color: !isUnlocked
                 ? (isDark ? Colors.grey[800] : Colors.grey[300])
                 : null,
+            // Glow effect for unlocked achievements
             boxShadow: isUnlocked
                 ? [
                     BoxShadow(
@@ -52,6 +57,7 @@ class AchievementBadge extends StatelessWidget {
                 : null,
           ),
           child: Center(
+            // Show achievement icon or lock icon based on status
             child: isUnlocked
                 ? _getAchievementIcon(achievement.iconAsset)
                 : Icon(
@@ -61,6 +67,7 @@ class AchievementBadge extends StatelessWidget {
                   ),
           ),
         ),
+        // Optional achievement name label
         if (showLabel) ...[
           const SizedBox(height: 8),
           Text(
@@ -81,9 +88,10 @@ class AchievementBadge extends StatelessWidget {
     );
   }
 
+  /// Returns appropriate emoji icon based on achievement type
+  /// TODO: Replace with actual image assets when available
   Widget _getAchievementIcon(String iconAsset) {
-    // Since iconAsset is a path to an asset, we should display an image
-    // For now, we'll use emojis based on the asset name
+    // Map icon asset names to emojis for now
     if (iconAsset.contains('first_steps')) {
       return Text('🎯', style: TextStyle(fontSize: size * 0.5));
     } else if (iconAsset.contains('quiz_master')) {
@@ -105,6 +113,8 @@ class AchievementBadge extends StatelessWidget {
     }
   }
 
+  /// Returns gradient colors based on achievement category
+  /// Each achievement type has its own color scheme
   List<Color> _getAchievementColor(String name) {
     switch (name) {
       case 'First Steps':
