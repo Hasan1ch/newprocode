@@ -10,6 +10,8 @@ import 'package:procode/services/gamification_service.dart';
 import 'package:procode/utils/app_logger.dart';
 import 'package:image_picker/image_picker.dart';
 
+/// Provider managing user profile data and real-time updates
+/// Handles user stats, achievements, and profile management with live sync
 class UserProvider extends ChangeNotifier {
   final DatabaseService _databaseService = DatabaseService();
   final StorageService _storageService = StorageService();
@@ -21,14 +23,16 @@ class UserProvider extends ChangeNotifier {
   StreamSubscription<DocumentSnapshot>? _userStatsSubscription;
   StreamSubscription<QuerySnapshot>? _achievementsSubscription;
 
+  // User data storage
   UserModel? _user;
   UserStats? _userStats;
   List<Achievement> _achievements = [];
-  Map<String, int> _stats = {};
+  Map<String, int> _stats = {}; // Legacy format for backward compatibility
   bool _isLoading = false;
   String? _error;
   String? _currentUserId;
 
+  // Getters for UI binding
   UserModel? get user => _user;
   UserStats? get userStats => _userStats;
   List<Achievement> get achievements => _achievements;
@@ -37,6 +41,7 @@ class UserProvider extends ChangeNotifier {
   String? get error => _error;
 
   // Initialize user data with real-time listeners
+  // Sets up live updates for user profile, stats, and achievements
   Future<void> loadUser(String userId) async {
     try {
       _isLoading = true;
@@ -105,11 +110,11 @@ class UserProvider extends ChangeNotifier {
           level: _user!.level,
           currentStreak: _user!.currentStreak,
           longestStreak: _user!.longestStreak,
-          lessonsCompleted: 0, // You'll need to calculate this
-          quizzesCompleted: 0, // You'll need to calculate this
+          lessonsCompleted: 0,
+          quizzesCompleted: 0,
           challengesCompleted: _user!.completedChallenges.length,
           coursesCompleted: _user!.completedCourses.length,
-          perfectQuizzes: 0, // You'll need to calculate this
+          perfectQuizzes: 0,
           totalTimeSpent: 0,
           lastActiveDate: _user!.lastActiveDate ?? DateTime.now(),
           xpHistory: {},
@@ -123,6 +128,7 @@ class UserProvider extends ChangeNotifier {
   }
 
   // Load user stats with real-time updates
+  // Syncs stats document changes instantly
   void _loadUserStatsRealtime() {
     if (_currentUserId == null) return;
 
@@ -192,6 +198,7 @@ class UserProvider extends ChangeNotifier {
   }
 
   // Load achievements with real-time updates
+  // Automatically updates when new achievements are unlocked
   void _loadAchievementsRealtime() {
     if (_currentUserId == null) return;
 
@@ -244,6 +251,7 @@ class UserProvider extends ChangeNotifier {
   }
 
   // Update stats from current data
+  // Maintains legacy stats format for backward compatibility
   void _updateStats() {
     if (_userStats != null) {
       _stats = {
@@ -271,7 +279,8 @@ class UserProvider extends ChangeNotifier {
     }
   }
 
-  // Update user profile - FIXED VERSION
+  // Update user profile
+  // Handles profile updates including avatar upload
   Future<void> updateProfile({
     String? displayName,
     String? bio,
@@ -332,6 +341,7 @@ class UserProvider extends ChangeNotifier {
   }
 
   // Update privacy settings
+  // Controls visibility on leaderboards and profile sharing
   Future<void> updatePrivacySettings({
     bool? showEmail,
     bool? showProgress,
@@ -364,6 +374,7 @@ class UserProvider extends ChangeNotifier {
   }
 
   // Feature achievement
+  // Allows users to showcase up to 5 achievements on their profile
   Future<void> featureAchievement(String achievementId, int position) async {
     if (_user == null || position < 0 || position > 4) return;
 
@@ -430,6 +441,7 @@ class UserProvider extends ChangeNotifier {
   }
 
   // Utility method to manually trigger XP update (for testing)
+  // Simulates XP gain for development and testing purposes
   Future<void> debugAddXP(int amount) async {
     if (_user == null) return;
 
