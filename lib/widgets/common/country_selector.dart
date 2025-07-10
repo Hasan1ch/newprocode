@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:procode/config/countries.dart';
 import 'package:procode/config/app_colors.dart';
 
+/// Custom country selector widget with search functionality
+/// Provides a searchable dropdown with flag emojis for better UX
+/// Used in user profiles and registration for location selection
 class CountrySelector extends StatefulWidget {
   final String? selectedCountry;
   final ValueChanged<String?> onCountrySelected;
@@ -28,22 +31,23 @@ class _CountrySelectorState extends State<CountrySelector> {
   List<String> _filteredCountries = [];
   bool _isDropdownOpen = false;
   final _focusNode = FocusNode();
-  final _layerLink = LayerLink();
+  final _layerLink = LayerLink(); // Links overlay to text field
   OverlayEntry? _overlayEntry;
-  final GlobalKey _fieldKey = GlobalKey();
+  final GlobalKey _fieldKey = GlobalKey(); // For positioning overlay
 
   @override
   void initState() {
     super.initState();
     _searchController = TextEditingController();
     _selectedCountry = widget.selectedCountry;
-    _filteredCountries = Countries.names;
+    _filteredCountries = Countries.names; // Initialize with all countries
     _focusNode.addListener(_onFocusChange);
   }
 
   @override
   void didUpdateWidget(CountrySelector oldWidget) {
     super.didUpdateWidget(oldWidget);
+    // Update selection if parent changes it
     if (widget.selectedCountry != oldWidget.selectedCountry) {
       _selectedCountry = widget.selectedCountry;
       _searchController.text = widget.selectedCountry ?? '';
@@ -59,11 +63,12 @@ class _CountrySelectorState extends State<CountrySelector> {
     super.dispose();
   }
 
+  /// Handles focus changes to show/hide dropdown
   void _onFocusChange() {
     if (_focusNode.hasFocus) {
       _showOverlay();
     } else {
-      // Delay removal to allow for click events
+      // Delay removal to allow clicks on dropdown items
       Future.delayed(const Duration(milliseconds: 200), () {
         if (!_focusNode.hasFocus) {
           _removeOverlay();
@@ -72,11 +77,14 @@ class _CountrySelectorState extends State<CountrySelector> {
     }
   }
 
+  /// Filters country list based on search query
+  /// Updates overlay to show filtered results
   void _filterCountries(String query) {
     setState(() {
       if (query.isEmpty) {
         _filteredCountries = Countries.names;
       } else {
+        // Case-insensitive search
         _filteredCountries = Countries.names
             .where((country) =>
                 country.toLowerCase().contains(query.toLowerCase()))
@@ -86,6 +94,7 @@ class _CountrySelectorState extends State<CountrySelector> {
     _updateOverlay();
   }
 
+  /// Handles country selection
   void _selectCountry(String country) {
     setState(() {
       _selectedCountry = country;
@@ -97,9 +106,11 @@ class _CountrySelectorState extends State<CountrySelector> {
     _focusNode.unfocus();
   }
 
+  /// Shows the dropdown overlay
   void _showOverlay() {
     _removeOverlay();
 
+    // Get text field position for overlay placement
     final RenderBox? renderBox =
         _fieldKey.currentContext?.findRenderObject() as RenderBox?;
     if (renderBox == null) return;
@@ -109,18 +120,21 @@ class _CountrySelectorState extends State<CountrySelector> {
     setState(() => _isDropdownOpen = true);
   }
 
+  /// Removes the dropdown overlay
   void _removeOverlay() {
     _overlayEntry?.remove();
     _overlayEntry = null;
     setState(() => _isDropdownOpen = false);
   }
 
+  /// Updates overlay content without recreating it
   void _updateOverlay() {
     if (_overlayEntry != null) {
       _overlayEntry!.markNeedsBuild();
     }
   }
 
+  /// Creates the dropdown overlay with country list
   OverlayEntry _createOverlayEntry() {
     final RenderBox? renderBox =
         _fieldKey.currentContext?.findRenderObject() as RenderBox?;
@@ -134,12 +148,12 @@ class _CountrySelectorState extends State<CountrySelector> {
     return OverlayEntry(
       builder: (context) => GestureDetector(
         behavior: HitTestBehavior.translucent,
-        onTap: _removeOverlay,
+        onTap: _removeOverlay, // Close on outside tap
         child: Stack(
           children: [
             Positioned(
               left: offset.dx,
-              top: offset.dy + size.height + 5.0,
+              top: offset.dy + size.height + 5.0, // Position below field
               width: size.width,
               child: Material(
                 elevation: 8,
@@ -166,6 +180,7 @@ class _CountrySelectorState extends State<CountrySelector> {
                         final countryCode = Countries.getCountryCode(country);
 
                         // Convert country code to flag emoji
+                        // Uses Unicode regional indicator symbols
                         String flagEmoji = '';
                         if (countryCode != null && countryCode.length == 2) {
                           final firstLetter =
@@ -191,11 +206,13 @@ class _CountrySelectorState extends State<CountrySelector> {
                                 : null,
                             child: Row(
                               children: [
+                                // Flag emoji
                                 Text(
                                   flagEmoji,
                                   style: const TextStyle(fontSize: 20),
                                 ),
                                 const SizedBox(width: 12),
+                                // Country name
                                 Expanded(
                                   child: Text(
                                     country,
@@ -213,6 +230,7 @@ class _CountrySelectorState extends State<CountrySelector> {
                                     ),
                                   ),
                                 ),
+                                // Check mark for selected
                                 if (isSelected)
                                   Icon(
                                     Icons.check,
@@ -240,7 +258,7 @@ class _CountrySelectorState extends State<CountrySelector> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    // Update controller text when selected country changes
+    // Sync controller text with selection
     if (_searchController.text != (_selectedCountry ?? '')) {
       _searchController.text = _selectedCountry ?? '';
     }
@@ -250,6 +268,7 @@ class _CountrySelectorState extends State<CountrySelector> {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
+        // Optional label
         if (widget.label != null) ...[
           Text(
             widget.label!,
@@ -259,6 +278,7 @@ class _CountrySelectorState extends State<CountrySelector> {
           ),
           const SizedBox(height: 8),
         ],
+        // Search field with dropdown trigger
         TextFormField(
           controller: _searchController,
           focusNode: _focusNode,
