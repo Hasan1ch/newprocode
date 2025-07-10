@@ -5,11 +5,14 @@ import 'package:share_plus/share_plus.dart';
 
 import 'dart:math' as math;
 
+/// Level up celebration dialog with dynamic animations
+/// Creates an exciting moment when users reach new levels
+/// Features rotating stars, pulsing badge, and fireworks
 class LevelUpDialog extends StatefulWidget {
-  final String newLevel;
-  final int levelNumber;
-  final int currentXP;
-  final int nextLevelXP;
+  final String newLevel; // Rank title (e.g., "Apprentice")
+  final int levelNumber; // Numeric level
+  final int currentXP; // Current XP in new level
+  final int nextLevelXP; // XP needed for next level
 
   const LevelUpDialog({
     Key? key,
@@ -19,6 +22,7 @@ class LevelUpDialog extends StatefulWidget {
     required this.nextLevelXP,
   }) : super(key: key);
 
+  /// Static method for easy dialog display
   static void show(
     BuildContext context, {
     required String newLevel,
@@ -28,7 +32,7 @@ class LevelUpDialog extends StatefulWidget {
   }) {
     showDialog(
       context: context,
-      barrierDismissible: false,
+      barrierDismissible: false, // Force user to acknowledge level up
       builder: (context) => LevelUpDialog(
         newLevel: newLevel,
         levelNumber: levelNumber,
@@ -51,6 +55,7 @@ class _LevelUpDialogState extends State<LevelUpDialog>
   late Animation<double> _rotateAnimation;
   late Animation<double> _pulseAnimation;
 
+  // Particle system for rotating stars
   final List<_Star> _stars = [];
   final _random = math.Random();
 
@@ -58,21 +63,25 @@ class _LevelUpDialogState extends State<LevelUpDialog>
   void initState() {
     super.initState();
 
+    // Scale animation for dialog entrance
     _scaleController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
 
+    // Rotation animation for star field
     _rotateController = AnimationController(
       duration: const Duration(seconds: 3),
       vsync: this,
     );
 
+    // Pulse animation for level badge
     _pulseController = AnimationController(
       duration: const Duration(seconds: 2),
       vsync: this,
     );
 
+    // Elastic entrance animation
     _scaleAnimation = Tween<double>(
       begin: 0.5,
       end: 1.0,
@@ -81,6 +90,7 @@ class _LevelUpDialogState extends State<LevelUpDialog>
       curve: Curves.elasticOut,
     ));
 
+    // Continuous rotation for stars
     _rotateAnimation = Tween<double>(
       begin: 0,
       end: 2 * math.pi,
@@ -89,6 +99,7 @@ class _LevelUpDialogState extends State<LevelUpDialog>
       curve: Curves.linear,
     ));
 
+    // Breathing effect for badge
     _pulseAnimation = Tween<double>(
       begin: 1.0,
       end: 1.1,
@@ -97,7 +108,7 @@ class _LevelUpDialogState extends State<LevelUpDialog>
       curve: Curves.easeInOut,
     ));
 
-    // Generate stars
+    // Generate random stars for particle effect
     for (int i = 0; i < 20; i++) {
       _stars.add(_Star(
         x: _random.nextDouble() * 400 - 200,
@@ -108,7 +119,7 @@ class _LevelUpDialogState extends State<LevelUpDialog>
       ));
     }
 
-    // Start animations
+    // Start all animations
     _scaleController.forward();
     _rotateController.repeat();
     _pulseController.repeat(reverse: true);
@@ -122,27 +133,30 @@ class _LevelUpDialogState extends State<LevelUpDialog>
     super.dispose();
   }
 
+  /// Assigns colors based on level progression
+  /// Higher levels get more prestigious colors
   Color _getLevelColor() {
     final colors = [
-      Colors.grey, // Level 1
-      Colors.green, // Level 2
-      Colors.blue, // Level 3
-      Colors.purple, // Level 4
-      Colors.orange, // Level 5
-      Colors.red, // Level 6
-      Colors.amber, // Level 7+
+      Colors.grey, // Level 1 - Starting
+      Colors.green, // Level 2 - Growth
+      Colors.blue, // Level 3 - Progress
+      Colors.purple, // Level 4 - Advanced
+      Colors.orange, // Level 5 - Expert
+      Colors.red, // Level 6 - Master
+      Colors.amber, // Level 7+ - Elite
     ];
 
     return colors[math.min(widget.levelNumber - 1, colors.length - 1)];
   }
 
+  /// Builds animated level badge with stars
   Widget _buildLevelBadge() {
     final levelColor = _getLevelColor();
 
     return Stack(
       alignment: Alignment.center,
       children: [
-        // Rotating stars background
+        // Rotating star field background
         AnimatedBuilder(
           animation: _rotateAnimation,
           builder: (context, child) {
@@ -153,6 +167,7 @@ class _LevelUpDialogState extends State<LevelUpDialog>
                 height: 200,
                 child: Stack(
                   children: _stars.map((star) {
+                    // Calculate star position in circular orbit
                     final angle = _rotateAnimation.value + star.delay;
                     final distance = 50 + star.speed * 50;
                     final x = math.cos(angle) * distance;
@@ -167,6 +182,7 @@ class _LevelUpDialogState extends State<LevelUpDialog>
                         decoration: BoxDecoration(
                           color: Colors.white,
                           shape: BoxShape.circle,
+                          // Glow effect
                           boxShadow: [
                             BoxShadow(
                               color: Colors.white,
@@ -183,7 +199,7 @@ class _LevelUpDialogState extends State<LevelUpDialog>
           },
         ),
 
-        // Level badge
+        // Pulsing level badge
         AnimatedBuilder(
           animation: _pulseAnimation,
           builder: (context, child) {
@@ -272,16 +288,18 @@ class _LevelUpDialogState extends State<LevelUpDialog>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Lottie animation
+                  // Animated celebration area
                   SizedBox(
                     height: 200,
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
+                        // Fireworks animation
                         Lottie.asset(
                           'assets/animations/lottie/fireworks.json',
                           repeat: true,
                         ),
+                        // Level badge on top
                         _buildLevelBadge(),
                       ],
                     ),
@@ -289,7 +307,7 @@ class _LevelUpDialogState extends State<LevelUpDialog>
 
                   SizedBox(height: 24),
 
-                  // Title
+                  // Level up text
                   Text(
                     'LEVEL UP!',
                     style: TextStyle(
@@ -302,7 +320,7 @@ class _LevelUpDialogState extends State<LevelUpDialog>
 
                   SizedBox(height: 8),
 
-                  // New Level
+                  // Rank progression
                   Text(
                     'You are now a',
                     style: TextStyle(
@@ -313,6 +331,7 @@ class _LevelUpDialogState extends State<LevelUpDialog>
 
                   SizedBox(height: 4),
 
+                  // New rank title
                   Text(
                     widget.newLevel.toUpperCase(),
                     style: TextStyle(
@@ -348,6 +367,7 @@ class _LevelUpDialogState extends State<LevelUpDialog>
                         ],
                       ),
                       SizedBox(height: 8),
+                      // XP progress bar
                       ClipRRect(
                         borderRadius: BorderRadius.circular(8),
                         child: LinearProgressIndicator(
@@ -364,10 +384,11 @@ class _LevelUpDialogState extends State<LevelUpDialog>
 
                   SizedBox(height: 32),
 
-                  // Actions
+                  // Action buttons
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
+                      // Share achievement
                       TextButton.icon(
                         onPressed: () {
                           Share.share(
@@ -377,6 +398,7 @@ class _LevelUpDialogState extends State<LevelUpDialog>
                         icon: Icon(Icons.share),
                         label: Text('Share'),
                       ),
+                      // Continue button
                       ElevatedButton(
                         onPressed: () {
                           Navigator.of(context).pop();
@@ -401,18 +423,20 @@ class _LevelUpDialogState extends State<LevelUpDialog>
     );
   }
 
-  // Helper methods to create color shades
+  /// Creates darker shade for gradient
   Color _getDarkerShade(Color color) {
     final hsl = HSLColor.fromColor(color);
     return hsl.withLightness((hsl.lightness - 0.1).clamp(0.0, 1.0)).toColor();
   }
 
+  /// Creates lighter shade for gradient
   Color _getLighterShade(Color color) {
     final hsl = HSLColor.fromColor(color);
     return hsl.withLightness((hsl.lightness + 0.1).clamp(0.0, 1.0)).toColor();
   }
 }
 
+/// Star particle for rotating animation
 class _Star {
   final double x;
   final double y;
