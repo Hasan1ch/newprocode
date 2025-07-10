@@ -1,17 +1,22 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:procode/utils/app_logger.dart';
 
+/// Email Service handles all email-related operations in the app
+/// Currently uses Firebase Auth for verification/reset emails
+/// Future implementation would integrate with email services like SendGrid
 class EmailService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // Email templates
+  // Email templates - these would typically be stored in a config file
   static const String _appName = 'ProCode';
   static const String _supportEmail = 'support@procode.app';
 
-  // Send verification email
+  /// Sends email verification to newly registered users
+  /// This is crucial for ensuring valid email addresses and preventing spam accounts
   Future<void> sendVerificationEmail() async {
     try {
       final user = _auth.currentUser;
+      // Only send if user exists and hasn't verified their email yet
       if (user != null && !user.emailVerified) {
         await user.sendEmailVerification();
         AppLogger.info('Verification email sent to ${user.email}');
@@ -22,7 +27,8 @@ class EmailService {
     }
   }
 
-  // Send password reset email
+  /// Handles password reset flow through Firebase Auth
+  /// Sends a secure link allowing users to reset their password
   Future<void> sendPasswordResetEmail(String email) async {
     try {
       await _auth.sendPasswordResetEmail(email: email);
@@ -33,7 +39,9 @@ class EmailService {
     }
   }
 
-  // Send welcome email (this would normally be done server-side)
+  /// Placeholder for welcome email functionality
+  /// In production, this would trigger a Cloud Function to send personalized welcome emails
+  /// This improves user engagement and provides onboarding information
   Future<void> sendWelcomeEmail(String email, String username) async {
     try {
       // In a production app, this would trigger a Cloud Function or backend service
@@ -48,7 +56,8 @@ class EmailService {
     }
   }
 
-  // Send achievement unlocked email
+  /// Notifies users when they unlock achievements - great for engagement
+  /// This gamification element encourages continued learning
   Future<void> sendAchievementEmail(
       String email, String achievementName) async {
     try {
@@ -60,7 +69,8 @@ class EmailService {
     }
   }
 
-  // Send course completion email
+  /// Celebrates course completion milestones with users
+  /// Helps maintain motivation and provides a sense of accomplishment
   Future<void> sendCourseCompletionEmail(
       String email, String courseName) async {
     try {
@@ -72,7 +82,8 @@ class EmailService {
     }
   }
 
-  // Send streak reminder email
+  /// Reminder emails help maintain user engagement and learning streaks
+  /// Studies show consistent reminders improve course completion rates
   Future<void> sendStreakReminderEmail(String email, int currentStreak) async {
     try {
       // This would normally trigger a backend service
@@ -83,11 +94,13 @@ class EmailService {
     }
   }
 
-  // Check if email is verified
+  /// Checks if user has verified their email address
+  /// We use this to restrict access to certain features until email is verified
   Future<bool> isEmailVerified() async {
     try {
       final user = _auth.currentUser;
       if (user != null) {
+        // Reload user to get latest verification status from Firebase
         await user.reload();
         return user.emailVerified;
       }
@@ -98,7 +111,8 @@ class EmailService {
     }
   }
 
-  // Resend verification email
+  /// Allows users to request another verification email if they missed the first one
+  /// Common scenario: email went to spam or expired
   Future<void> resendVerificationEmail() async {
     try {
       final user = _auth.currentUser;
@@ -116,12 +130,14 @@ class EmailService {
     }
   }
 
-  // Update email address
+  /// Allows users to change their email address
+  /// Automatically sends verification to the new email for security
   Future<void> updateEmail(String newEmail) async {
     try {
       final user = _auth.currentUser;
       if (user != null) {
         await user.updateEmail(newEmail);
+        // Security measure: always verify new email addresses
         await user.sendEmailVerification();
         AppLogger.info('Email updated to $newEmail and verification sent');
       } else {
@@ -133,7 +149,10 @@ class EmailService {
     }
   }
 
-  // Email templates (for reference - would be used server-side)
+  /// Email templates for future server-side implementation
+  /// These demonstrate the email content structure we plan to use
+
+  /// Welcome email template - sent after successful registration
   static Map<String, String> getWelcomeEmailTemplate(String username) {
     return {
       'subject': 'Welcome to $_appName!',
@@ -148,6 +167,7 @@ class EmailService {
     };
   }
 
+  /// Achievement email template - celebrates user progress
   static Map<String, String> getAchievementEmailTemplate(
       String username, String achievementName) {
     return {
@@ -162,6 +182,7 @@ class EmailService {
     };
   }
 
+  /// Course completion email template - motivates continued learning
   static Map<String, String> getCourseCompletionEmailTemplate(
       String username, String courseName) {
     return {
