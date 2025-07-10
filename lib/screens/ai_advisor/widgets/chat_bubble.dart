@@ -4,6 +4,8 @@ import 'package:procode/config/theme.dart';
 import 'package:intl/intl.dart';
 
 // Define ChatMessage class here
+/// Model representing a single chat message
+/// Used throughout AI advisor screens for conversation display
 class ChatMessage {
   final String text;
   final bool isUser;
@@ -18,6 +20,8 @@ class ChatMessage {
   });
 }
 
+/// Reusable chat bubble widget for AI conversations
+/// Displays messages with different styles for user/AI and includes action buttons
 class ChatBubble extends StatelessWidget {
   final ChatMessage message;
   final bool isLoading;
@@ -33,6 +37,7 @@ class ChatBubble extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
+    // Show loading indicator for pending AI responses
     if (isLoading) {
       return _buildLoadingBubble(context);
     }
@@ -48,6 +53,7 @@ class ChatBubble extends StatelessWidget {
             message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // AI avatar on the left
           if (!message.isUser) ...[
             CircleAvatar(
               radius: 20,
@@ -60,6 +66,7 @@ class ChatBubble extends StatelessWidget {
             ),
             const SizedBox(width: 8),
           ],
+          // Message bubble
           Flexible(
             child: Column(
               crossAxisAlignment: message.isUser
@@ -69,12 +76,14 @@ class ChatBubble extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
+                    // User messages get gradient, AI messages get surface color
                     gradient: message.isUser ? AppTheme.primaryGradient : null,
                     color: !message.isUser
                         ? (message.isError
                             ? theme.colorScheme.errorContainer
                             : theme.colorScheme.surfaceContainerHighest)
                         : null,
+                    // Different corner radius for sender/receiver
                     borderRadius: BorderRadius.only(
                       topLeft: const Radius.circular(16),
                       topRight: const Radius.circular(16),
@@ -85,6 +94,7 @@ class ChatBubble extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Message text - selectable for copying
                       SelectableText(
                         message.text,
                         style: TextStyle(
@@ -96,6 +106,7 @@ class ChatBubble extends StatelessWidget {
                           fontSize: 15,
                         ),
                       ),
+                      // Action buttons for AI messages
                       if (!message.isUser && !message.isError) ...[
                         const SizedBox(height: 8),
                         Row(
@@ -121,7 +132,7 @@ class ChatBubble extends StatelessWidget {
                               icon: Icons.thumb_up_outlined,
                               tooltip: 'Helpful',
                               onTap: () {
-                                // Track helpful responses
+                                // Track helpful responses for AI improvement
                               },
                             ),
                             const SizedBox(width: 8),
@@ -129,7 +140,7 @@ class ChatBubble extends StatelessWidget {
                               icon: Icons.thumb_down_outlined,
                               tooltip: 'Not helpful',
                               onTap: () {
-                                // Track unhelpful responses
+                                // Track unhelpful responses for AI improvement
                               },
                             ),
                           ],
@@ -138,6 +149,7 @@ class ChatBubble extends StatelessWidget {
                     ],
                   ),
                 ),
+                // Timestamp display
                 if (message.timestamp != null) ...[
                   const SizedBox(height: 4),
                   Text(
@@ -151,6 +163,7 @@ class ChatBubble extends StatelessWidget {
               ],
             ),
           ),
+          // User avatar on the right
           if (message.isUser) ...[
             const SizedBox(width: 8),
             CircleAvatar(
@@ -168,6 +181,7 @@ class ChatBubble extends StatelessWidget {
     );
   }
 
+  /// Build loading indicator while AI is thinking
   Widget _buildLoadingBubble(BuildContext context) {
     final theme = Theme.of(context);
 
@@ -226,6 +240,7 @@ class ChatBubble extends StatelessWidget {
   }
 }
 
+/// Small action button for message interactions
 class _ActionButton extends StatelessWidget {
   final IconData icon;
   final String tooltip;
