@@ -1,20 +1,21 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Model representing user progress in a course
+/// Tracks completion status and learning journey
 class ProgressModel {
-  String id; // Made non-final so we can update it after creation
-  final String userId;
-  final String courseId;
-  final List<String> completedModules;
-  final List<String> completedLessons;
-  final Map<String, int> quizScores; // quizId: score
-  final String currentModuleId;
-  final String currentLessonId;
-  final String lastAccessedLesson;
-  final DateTime lastAccessedAt;
-  final DateTime enrolledAt;
-  final int totalXpEarned;
-  final double completionPercentage;
+  String id; // Mutable for post-creation updates
+  final String userId; // Student reference
+  final String courseId; // Course being tracked
+  final List<String> completedModules; // Finished modules
+  final List<String> completedLessons; // Finished lessons
+  final Map<String, int> quizScores; // Quiz results: quizId -> score
+  final String currentModuleId; // Active module
+  final String currentLessonId; // Active lesson
+  final String lastAccessedLesson; // Resume point
+  final DateTime lastAccessedAt; // Last activity timestamp
+  final DateTime enrolledAt; // Course start date
+  final int totalXpEarned; // Accumulated experience points
+  final double completionPercentage; // Overall progress (0-100)
 
   ProgressModel({
     this.id = '',
@@ -32,7 +33,7 @@ class ProgressModel {
     required this.completionPercentage,
   });
 
-  /// Create ProgressModel from JSON
+  /// Creates progress from Firestore document
   factory ProgressModel.fromJson(Map<String, dynamic> json) {
     return ProgressModel(
       id: json['id'] ?? '',
@@ -55,10 +56,10 @@ class ProgressModel {
     );
   }
 
-  /// Convert ProgressModel to JSON
+  /// Converts progress to Firestore format
   Map<String, dynamic> toJson() {
     return {
-      if (id.isNotEmpty) 'id': id,
+      if (id.isNotEmpty) 'id': id, // Only include if set
       'userId': userId,
       'courseId': courseId,
       'completedModules': completedModules,
@@ -74,7 +75,7 @@ class ProgressModel {
     };
   }
 
-  /// Create a copy with updated fields
+  /// Creates a modified copy of the progress
   ProgressModel copyWith({
     String? id,
     String? userId,
@@ -108,5 +109,5 @@ class ProgressModel {
   }
 }
 
-// Type alias for CourseProvider compatibility
+// Alias for CourseProvider compatibility
 typedef Progress = ProgressModel;
