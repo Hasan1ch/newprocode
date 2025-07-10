@@ -10,6 +10,8 @@ import 'package:procode/widgets/common/error_widget.dart';
 import 'package:procode/widgets/common/gradient_container.dart';
 import 'package:procode/config/app_colors.dart';
 
+/// Main leaderboard screen showing user rankings with special top 3 display
+/// Supports filtering by global rankings or individual course rankings
 class LeaderboardScreen extends StatefulWidget {
   const LeaderboardScreen({super.key});
 
@@ -18,7 +20,7 @@ class LeaderboardScreen extends StatefulWidget {
 }
 
 class _LeaderboardScreenState extends State<LeaderboardScreen> {
-  String? _userId;
+  String? _userId; // Current user's ID for highlighting their entry
 
   @override
   void initState() {
@@ -26,6 +28,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     _loadLeaderboard();
   }
 
+  /// Loads leaderboard data with current user context
   Future<void> _loadLeaderboard() async {
     final authProvider = context.read<AuthProvider>();
     _userId = authProvider.user?.uid;
@@ -42,7 +45,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
         builder: (context, leaderboardProvider, _) {
           return CustomScrollView(
             slivers: [
-              // Custom App Bar
+              // Expandable app bar with gradient background
               SliverAppBar(
                 expandedHeight: 200,
                 pinned: true,
@@ -53,6 +56,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
+                          // Trophy icon for visual appeal
                           const Icon(
                             Icons.emoji_events,
                             size: 64,
@@ -70,6 +74,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                                 ),
                           ),
                           const SizedBox(height: 8),
+                          // Show user's rank if available
                           if (leaderboardProvider.userRank != null)
                             Container(
                               padding: const EdgeInsets.symmetric(
@@ -95,7 +100,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                 ),
               ),
 
-              // Filter Chips
+              // Sticky filter chips header
               SliverPersistentHeader(
                 pinned: true,
                 delegate: _FilterHeaderDelegate(
@@ -117,7 +122,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                 ),
               ),
 
-              // Content
+              // Main content area with different states
               if (leaderboardProvider.isLoading)
                 const SliverFillRemaining(
                   child: LoadingWidget(),
@@ -130,6 +135,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                   ),
                 )
               else if (leaderboardProvider.entries.isEmpty)
+                // Empty state with helpful message
                 SliverFillRemaining(
                   child: Center(
                     child: Column(
@@ -164,18 +170,20 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                   ),
                 )
               else
+                // Leaderboard entries list
                 SliverPadding(
                   padding: const EdgeInsets.all(16),
                   sliver: SliverList(
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
-                        // Top 3 special display
+                        // Special display for top 3 users
                         if (index == 0 &&
                             leaderboardProvider.entries.length >= 3) {
                           return Column(
                             children: [
                               _buildTop3Section(leaderboardProvider),
                               const SizedBox(height: 24),
+                              // Section header for remaining entries
                               if (leaderboardProvider.entries.length > 3)
                                 const Padding(
                                   padding: EdgeInsets.only(bottom: 16),
@@ -191,7 +199,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                           );
                         }
 
-                        // Adjust index for remaining entries
+                        // Adjust index to account for top 3 special display
                         final adjustedIndex =
                             leaderboardProvider.entries.length >= 3
                                 ? (index == 0 ? -1 : index + 2)
@@ -199,7 +207,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
                         if (adjustedIndex == -1) return const SizedBox.shrink();
 
-                        // Show user's entry if not in top list
+                        // Show user's position if they're not in visible list
                         if (adjustedIndex ==
                                 leaderboardProvider.entries.length &&
                             leaderboardProvider.userEntry != null &&
@@ -207,6 +215,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                             leaderboardProvider.userRank! > 100) {
                           return Column(
                             children: [
+                              // Divider with "Your Position" label
                               const Padding(
                                 padding: EdgeInsets.symmetric(vertical: 16),
                                 child: Row(
@@ -235,6 +244,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                           return const SizedBox.shrink();
                         }
 
+                        // Regular leaderboard entries
                         final entry =
                             leaderboardProvider.entries[adjustedIndex];
                         final rank = adjustedIndex + 1;
@@ -246,6 +256,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                           isCurrentUser: isCurrentUser,
                         );
                       },
+                      // Calculate total items including special sections
                       childCount: leaderboardProvider.entries.length >= 3
                           ? leaderboardProvider.entries.length -
                               2 +
@@ -270,12 +281,14 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     );
   }
 
+  /// Builds special podium-style display for top 3 users
   Widget _buildTop3Section(LeaderboardProvider provider) {
     final top3 = provider.entries.take(3).toList();
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
+        // Gradient background for emphasis
         gradient: LinearGradient(
           colors: [
             AppColors.primary.withValues(alpha: 0.1),
@@ -290,7 +303,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          // Second place
+          // Second place (left side)
           if (top3.length > 1)
             Expanded(
               child: _buildTopUserCard(
@@ -301,7 +314,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               ),
             ),
 
-          // First place
+          // First place (center, tallest)
           if (top3.isNotEmpty)
             Expanded(
               child: _buildTopUserCard(
@@ -312,7 +325,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               ),
             ),
 
-          // Third place
+          // Third place (right side)
           if (top3.length > 2)
             Expanded(
               child: _buildTopUserCard(
@@ -327,6 +340,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     );
   }
 
+  /// Builds individual card for top 3 users with special styling
   Widget _buildTopUserCard({
     required LeaderboardEntry entry,
     required int rank,
@@ -336,7 +350,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Crown/Medal icon for top 3
+        // Trophy/medal icon
         Icon(
           rank == 1 ? Icons.emoji_events : Icons.military_tech,
           color: _getRankColor(rank),
@@ -344,7 +358,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
         ),
         const SizedBox(height: 8),
 
-        // Avatar
+        // User avatar with rank badge
         Stack(
           alignment: Alignment.bottomRight,
           children: [
@@ -369,7 +383,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                     )
                   : null,
             ),
-            // Rank badge
+            // Rank number badge
             Container(
               width: 28,
               height: 28,
@@ -411,7 +425,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
         ),
         const SizedBox(height: 4),
 
-        // XP
+        // XP display
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -432,7 +446,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
           ],
         ),
 
-        // Level
+        // Level badge
         Container(
           margin: const EdgeInsets.only(top: 4),
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -453,19 +467,21 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     );
   }
 
+  /// Returns color for rank medals
   Color _getRankColor(int rank) {
     switch (rank) {
       case 1:
-        return Colors.amber;
+        return Colors.amber; // Gold
       case 2:
-        return Colors.grey;
+        return Colors.grey; // Silver
       case 3:
-        return Colors.brown;
+        return Colors.brown; // Bronze
       default:
         return Colors.blue;
     }
   }
 
+  /// Returns color based on level progression
   Color _getLevelColor(int level) {
     if (level >= 7) return Colors.purple;
     if (level >= 5) return Colors.indigo;
@@ -473,6 +489,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     return Colors.green;
   }
 
+  /// Provides contextual empty state messages
   String _getEmptyMessage(LeaderboardFilter filter) {
     switch (filter) {
       case LeaderboardFilter.global:
@@ -483,6 +500,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   }
 }
 
+/// Custom sliver delegate for sticky filter header
 class _FilterHeaderDelegate extends SliverPersistentHeaderDelegate {
   final Widget child;
 
