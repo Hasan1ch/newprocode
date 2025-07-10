@@ -7,6 +7,8 @@ import 'package:procode/widgets/common/gradient_container.dart';
 import 'package:procode/config/routes.dart';
 import 'package:procode/config/app_colors.dart';
 
+/// Email verification screen with automatic status checking
+/// Polls Firebase to detect when user verifies their email
 class VerifyEmailScreen extends StatefulWidget {
   const VerifyEmailScreen({Key? key}) : super(key: key);
 
@@ -16,11 +18,13 @@ class VerifyEmailScreen extends StatefulWidget {
 
 class _VerifyEmailScreenState extends State<VerifyEmailScreen>
     with SingleTickerProviderStateMixin {
+  // Timers for automatic checking and resend cooldown
   Timer? _verificationTimer;
   Timer? _resendCountdownTimer;
   int _resendTimer = 0;
   bool _isCheckingVerification = false;
 
+  // Animation controller for icon animation
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
 
@@ -32,6 +36,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen>
     _sendInitialVerificationEmail();
   }
 
+  /// Initialize scale animation for email icon
   void _initializeAnimation() {
     _animationController = AnimationController(
       duration: const Duration(seconds: 2),
@@ -49,12 +54,15 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen>
     _animationController.forward();
   }
 
+  /// Send verification email on screen load
   Future<void> _sendInitialVerificationEmail() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     await authProvider.sendEmailVerification();
     _startResendTimer();
   }
 
+  /// Start periodic check for email verification
+  /// Automatically navigates to dashboard when verified
   void _startVerificationCheck() {
     _verificationTimer =
         Timer.periodic(const Duration(seconds: 3), (timer) async {
@@ -90,6 +98,8 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen>
     });
   }
 
+  /// Start countdown timer for resend button
+  /// Prevents spam by enforcing 60 second cooldown
   void _startResendTimer() {
     if (mounted) {
       setState(() {
@@ -114,6 +124,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen>
     });
   }
 
+  /// Resend verification email with cooldown check
   Future<void> _resendVerificationEmail() async {
     if (_resendTimer > 0) return;
 
@@ -131,6 +142,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen>
     }
   }
 
+  /// Display success message
   void _showSuccessSnackBar(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -145,6 +157,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen>
     );
   }
 
+  /// Display error message
   void _showErrorSnackBar(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -159,6 +172,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen>
     );
   }
 
+  /// Handle logout to change email
   Future<void> _handleLogout() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     await authProvider.logout();
@@ -169,7 +183,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen>
 
   @override
   void dispose() {
-    // Cancel all timers
+    // Cancel all timers to prevent memory leaks
     _verificationTimer?.cancel();
     _resendCountdownTimer?.cancel();
     _animationController.dispose();
@@ -189,7 +203,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Animation
+                // Animated email icon
                 ScaleTransition(
                   scale: _scaleAnimation,
                   child: Container(
@@ -231,7 +245,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen>
 
                 const SizedBox(height: 8),
 
-                // Email
+                // User email display
                 Text(
                   userEmail,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
@@ -242,7 +256,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen>
 
                 const SizedBox(height: 32),
 
-                // Instructions
+                // Instructions box
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -281,7 +295,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen>
 
                 const SizedBox(height: 32),
 
-                // Checking status
+                // Checking status indicator
                 if (_isCheckingVerification)
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -305,7 +319,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen>
 
                 const SizedBox(height: 24),
 
-                // Resend Button
+                // Resend Button with countdown
                 CustomButton(
                   text: _resendTimer > 0
                       ? 'Resend Email (${_resendTimer}s)'
@@ -327,7 +341,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen>
 
                 const Spacer(),
 
-                // Tips
+                // Tips for troubleshooting
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
