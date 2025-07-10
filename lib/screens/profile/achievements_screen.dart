@@ -7,6 +7,8 @@ import 'package:procode/widgets/common/loading_widget.dart';
 
 import 'package:procode/config/constants.dart' as constants;
 
+/// Screen displaying all achievements with tabs for unlocked and locked
+/// Allows users to feature achievements on their profile
 class AchievementsScreen extends StatefulWidget {
   const AchievementsScreen({super.key});
 
@@ -59,10 +61,10 @@ class _AchievementsScreenState extends State<AchievementsScreen>
             );
           }
 
-          // Get all possible achievements
+          // Get all possible achievements from constants
           final allAchievements = constants.achievements;
 
-          // Separate unlocked and locked
+          // Separate achievements by unlock status
           final unlockedAchievements = achievements.toList();
           final lockedAchievements = allAchievements
               .where((a) => !achievements.any((ua) => ua.id == a.id))
@@ -71,14 +73,14 @@ class _AchievementsScreenState extends State<AchievementsScreen>
           return TabBarView(
             controller: _tabController,
             children: [
-              // Unlocked Achievements
+              // Unlocked achievements tab
               _buildAchievementGrid(
                 achievements: unlockedAchievements,
                 isUnlocked: true,
                 emptyMessage: 'No achievements unlocked yet',
               ),
 
-              // Locked Achievements
+              // Locked achievements tab
               _buildAchievementGrid(
                 achievements: lockedAchievements,
                 isUnlocked: false,
@@ -91,12 +93,14 @@ class _AchievementsScreenState extends State<AchievementsScreen>
     );
   }
 
+  /// Builds grid layout for achievements
   Widget _buildAchievementGrid({
     required List<Achievement> achievements,
     required bool isUnlocked,
     required String emptyMessage,
   }) {
     if (achievements.isEmpty) {
+      // Empty state with icon and message
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -119,11 +123,12 @@ class _AchievementsScreenState extends State<AchievementsScreen>
       );
     }
 
+    // Achievement grid
     return GridView.builder(
       padding: const EdgeInsets.all(16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        childAspectRatio: 0.85,
+        crossAxisCount: 3, // Three columns
+        childAspectRatio: 0.85, // Slightly taller than square
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
       ),
@@ -135,12 +140,14 @@ class _AchievementsScreenState extends State<AchievementsScreen>
           onTap: () => _showAchievementDetails(achievement, isUnlocked),
           child: Column(
             children: [
+              // Achievement badge
               AchievementBadge(
                 achievement: achievement,
                 isUnlocked: isUnlocked,
                 size: 80,
               ),
               const SizedBox(height: 8),
+              // Achievement name
               Text(
                 achievement.name,
                 textAlign: TextAlign.center,
@@ -164,6 +171,7 @@ class _AchievementsScreenState extends State<AchievementsScreen>
     );
   }
 
+  /// Shows detailed achievement information in bottom sheet
   void _showAchievementDetails(Achievement achievement, bool isUnlocked) {
     final userProvider = context.read<UserProvider>();
     final user = userProvider.user!;
@@ -196,7 +204,7 @@ class _AchievementsScreenState extends State<AchievementsScreen>
             ),
             const SizedBox(height: 24),
 
-            // Achievement Badge
+            // Large achievement badge
             AchievementBadge(
               achievement: achievement,
               isUnlocked: isUnlocked,
@@ -204,7 +212,7 @@ class _AchievementsScreenState extends State<AchievementsScreen>
             ),
             const SizedBox(height: 16),
 
-            // Achievement Name
+            // Achievement name
             Text(
               achievement.name,
               style: Theme.of(context).textTheme.headlineSmall!.copyWith(
@@ -214,7 +222,7 @@ class _AchievementsScreenState extends State<AchievementsScreen>
             ),
             const SizedBox(height: 8),
 
-            // Description
+            // Achievement description
             Text(
               achievement.description,
               style: Theme.of(context).textTheme.bodyLarge,
@@ -222,7 +230,7 @@ class _AchievementsScreenState extends State<AchievementsScreen>
             ),
             const SizedBox(height: 16),
 
-            // Stats
+            // Achievement stats
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -240,27 +248,27 @@ class _AchievementsScreenState extends State<AchievementsScreen>
               ],
             ),
 
+            // Feature button for unlocked achievements
             if (isUnlocked) ...[
               const SizedBox(height: 24),
-              // Feature Button
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: () async {
                     if (isFeatured) {
-                      // Remove from featured
+                      // Remove from featured achievements
                       final featured =
                           List<String>.from(user.featuredAchievements);
                       featured.remove(achievement.id);
                       await userProvider.updateProfile();
                     } else if (user.featuredAchievements.length < 5) {
-                      // Add to featured
+                      // Add to featured (max 5 allowed)
                       await userProvider.featureAchievement(
                         achievement.id,
                         user.featuredAchievements.length,
                       );
                     } else {
-                      // Show replace dialog
+                      // Show replacement dialog if already have 5 featured
                       _showReplaceFeaturedDialog(achievement);
                     }
                     if (mounted) {
@@ -287,6 +295,7 @@ class _AchievementsScreenState extends State<AchievementsScreen>
     );
   }
 
+  /// Builds individual stat display
   Widget _buildStat({
     required IconData icon,
     required String label,
@@ -310,6 +319,7 @@ class _AchievementsScreenState extends State<AchievementsScreen>
     );
   }
 
+  /// Shows dialog to replace existing featured achievement
   void _showReplaceFeaturedDialog(Achievement newAchievement) {
     final userProvider = context.read<UserProvider>();
     final user = userProvider.user!;
@@ -325,6 +335,7 @@ class _AchievementsScreenState extends State<AchievementsScreen>
             const Text(
                 'You already have 5 featured achievements. Choose one to replace:'),
             const SizedBox(height: 16),
+            // List current featured achievements
             ...user.featuredAchievements.asMap().entries.map((entry) {
               final achievement = achievements.firstWhere(
                 (a) => a.id == entry.value,
@@ -354,6 +365,7 @@ class _AchievementsScreenState extends State<AchievementsScreen>
                 ),
                 title: Text(achievement.name),
                 onTap: () async {
+                  // Replace at the selected position
                   await userProvider.featureAchievement(
                       newAchievement.id, entry.key);
                   if (mounted) {
