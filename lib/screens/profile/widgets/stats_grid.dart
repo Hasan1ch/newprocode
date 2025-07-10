@@ -5,27 +5,31 @@ import 'package:procode/providers/course_provider.dart';
 import 'package:procode/config/theme.dart';
 import 'package:shimmer/shimmer.dart';
 
+/// Grid widget displaying user statistics in card format
+/// Shows XP, level, streak, and enrolled courses with loading states
 class StatsGrid extends StatelessWidget {
   const StatsGrid({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    // Watch providers for real-time updates
     final userProvider = context.watch<UserProvider>();
     final courseProvider = context.watch<CourseProvider>();
     final stats = userProvider.stats;
     final isLoading = userProvider.isLoading;
 
-    // Get actual enrolled courses count
+    // Get actual enrolled courses count from course provider
     final enrolledCoursesCount = courseProvider.enrolledCourses.length;
 
     return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 2,
+      shrinkWrap: true, // Important for use within scrollable widgets
+      physics: const NeverScrollableScrollPhysics(), // Prevent nested scrolling
+      crossAxisCount: 2, // Two cards per row
       mainAxisSpacing: 16,
       crossAxisSpacing: 16,
-      childAspectRatio: 1.5,
+      childAspectRatio: 1.5, // Width to height ratio
       children: [
+        // Total XP card
         _StatCard(
           icon: Icons.bolt,
           title: 'Total XP',
@@ -33,6 +37,7 @@ class StatsGrid extends StatelessWidget {
           gradient: AppTheme.primaryGradient,
           isLoading: isLoading,
         ),
+        // Level card
         _StatCard(
           icon: Icons.emoji_events,
           title: 'Level',
@@ -40,6 +45,7 @@ class StatsGrid extends StatelessWidget {
           gradient: AppTheme.accentGradient,
           isLoading: isLoading,
         ),
+        // Streak card
         _StatCard(
           icon: Icons.local_fire_department,
           title: 'Streak',
@@ -51,6 +57,7 @@ class StatsGrid extends StatelessWidget {
           ),
           isLoading: isLoading,
         ),
+        // Courses card
         _StatCard(
           icon: Icons.school,
           title: 'Courses',
@@ -67,6 +74,7 @@ class StatsGrid extends StatelessWidget {
   }
 }
 
+/// Individual stat card with gradient background and loading state
 class _StatCard extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -88,9 +96,11 @@ class _StatCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
+        // Use gradient in light mode, solid color in dark mode
         gradient: isDark ? null : gradient,
         color: isDark ? Theme.of(context).colorScheme.surface : null,
         borderRadius: BorderRadius.circular(16),
+        // Shadow for depth effect
         boxShadow: [
           BoxShadow(
             color:
@@ -104,7 +114,7 @@ class _StatCard extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
-            // Could show detailed stats in future
+            // TODO: Navigate to detailed stats view
           },
           borderRadius: BorderRadius.circular(16),
           child: Padding(
@@ -112,12 +122,14 @@ class _StatCard extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                // Stat icon
                 Icon(
                   icon,
                   size: 32,
                   color: isDark ? gradient.colors[0] : Colors.white,
                 ),
                 const SizedBox(height: 8),
+                // Value with shimmer loading effect
                 if (isLoading)
                   Shimmer.fromColors(
                     baseColor: isDark ? Colors.grey[700]! : Colors.grey[300]!,
@@ -144,6 +156,7 @@ class _StatCard extends StatelessWidget {
                     ),
                   ),
                 const SizedBox(height: 4),
+                // Stat title
                 Text(
                   title,
                   style: TextStyle(
