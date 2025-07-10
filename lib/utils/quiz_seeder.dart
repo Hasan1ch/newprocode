@@ -1,25 +1,31 @@
 // lib/utils/quiz_seeder.dart
-// This can be run from within your Flutter app to seed quiz data
+// This can be run from within Flutter app to seed quiz data
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:procode/models/quiz_model.dart';
 import 'package:procode/models/question_model.dart';
 
+/// Database seeder for populating initial quiz content
+/// This utility creates sample quizzes and questions for testing
+/// and provides initial content for new app installations
 class QuizSeeder {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Call this method from a button in your app or from main.dart
+  /// Main seeding method - creates all quiz categories
+  /// Call this from a button in your app (admin screen) or from main.dart
+  /// Only run once to avoid duplicate data
   static Future<void> seedQuizData() async {
     print('Starting quiz seeding...');
 
     try {
-      // Module Quizzes
+      // Create different types of quizzes for variety
+      // Module Quizzes - tied to specific course modules
       await _createModuleQuizzes();
 
-      // Quick Challenges
+      // Quick Challenges - 5-minute daily challenges
       await _createQuickChallenges();
 
-      // Weekly Challenges
+      // Weekly Challenges - comprehensive tests
       await _createWeeklyChallenges();
 
       print('Quiz seeding completed successfully!');
@@ -29,25 +35,29 @@ class QuizSeeder {
     }
   }
 
+  /// Creates quizzes tied to specific course modules
+  /// These test understanding of individual lessons
   static Future<void> _createModuleQuizzes() async {
     print('Creating module quizzes...');
 
     // Python Variables & Data Types Quiz
+    // This quiz tests fundamental Python concepts
     final pythonVariablesQuiz = QuizModel(
-      id: '',
+      id: '', // Firestore will generate ID
       title: 'Python Variables & Data Types',
       description: 'Test your understanding of Python variables and data types',
       courseId: 'python_fundamentals',
       moduleId: 'module_001',
       difficulty: 'beginner',
       category: 'module',
-      timeLimit: 600,
-      passingScore: 70,
+      timeLimit: 600, // 10 minutes
+      passingScore: 70, // 70% to pass
       totalQuestions: 10,
-      xpReward: 50,
+      xpReward: 50, // Reward for completion
       isActive: true,
     );
 
+    // Questions progressively increase in difficulty
     final pythonVariablesQuestions = [
       QuestionModel(
         id: '',
@@ -64,7 +74,7 @@ class QuizSeeder {
         id: '',
         type: 'mcq',
         question: 'What is the output of: type(3.14)',
-        codeSnippet: 'type(3.14)',
+        codeSnippet: 'type(3.14)', // Code shown to user
         options: [
           '<class \'int\'>',
           '<class \'float\'>',
@@ -116,6 +126,7 @@ class QuizSeeder {
         pythonVariablesQuiz, pythonVariablesQuestions);
 
     // Python Control Flow Quiz
+    // Tests understanding of if statements, loops, etc.
     final pythonControlFlowQuiz = QuizModel(
       id: '',
       title: 'Python Control Flow',
@@ -124,7 +135,7 @@ class QuizSeeder {
       moduleId: 'module_002',
       difficulty: 'beginner',
       category: 'module',
-      timeLimit: 900,
+      timeLimit: 900, // 15 minutes
       passingScore: 70,
       totalQuestions: 10,
       xpReward: 50,
@@ -170,6 +181,8 @@ class QuizSeeder {
         pythonControlFlowQuiz, pythonControlFlowQuestions);
   }
 
+  /// Creates quick 5-minute challenges for daily practice
+  /// These keep users engaged with bite-sized content
   static Future<void> _createQuickChallenges() async {
     print('Creating quick challenges...');
 
@@ -177,13 +190,13 @@ class QuizSeeder {
       id: '',
       title: 'Python Basics Speed Run',
       description: '5 quick questions to test your Python fundamentals',
-      courseId: 'general',
+      courseId: 'general', // Not tied to specific course
       difficulty: 'easy',
       category: 'quick',
-      timeLimit: 300,
-      passingScore: 60,
+      timeLimit: 300, // 5 minutes
+      passingScore: 60, // Lower passing score for quick challenges
       totalQuestions: 5,
-      xpReward: 25,
+      xpReward: 25, // Smaller reward for quick quiz
       isActive: true,
     );
 
@@ -230,6 +243,8 @@ class QuizSeeder {
     await _createQuizWithQuestions(pythonBasicsQuiz, pythonBasicsQuestions);
   }
 
+  /// Creates comprehensive weekly challenges
+  /// These test accumulated knowledge and provide bigger rewards
   static Future<void> _createWeeklyChallenges() async {
     print('Creating weekly challenges...');
 
@@ -240,13 +255,14 @@ class QuizSeeder {
       courseId: 'general',
       difficulty: 'hard',
       category: 'weekly',
-      timeLimit: 1800,
-      passingScore: 80,
+      timeLimit: 1800, // 30 minutes
+      passingScore: 80, // Higher passing score for weekly challenges
       totalQuestions: 20,
-      xpReward: 100,
+      xpReward: 100, // Big reward for weekly completion
       isActive: true,
     );
 
+    // Mix of easy, medium, and hard questions
     final weeklyChallengeQuestions = [
       QuestionModel(
         id: '',
@@ -293,14 +309,16 @@ class QuizSeeder {
     await _createQuizWithQuestions(weeklyChallenge, weeklyChallengeQuestions);
   }
 
+  /// Helper method to create quiz and its questions atomically
+  /// Uses batch writes for better performance
   static Future<void> _createQuizWithQuestions(
       QuizModel quiz, List<QuestionModel> questions) async {
     try {
-      // Create quiz document
+      // Create quiz document first
       final quizDoc = await _firestore.collection('quizzes').add(quiz.toJson());
       print('Created quiz: ${quiz.title}');
 
-      // Create questions subcollection
+      // Create questions subcollection using batch write
       final batch = _firestore.batch();
 
       for (int i = 0; i < questions.length; i++) {
@@ -310,6 +328,7 @@ class QuizSeeder {
             .collection('questions')
             .doc();
 
+        // Add order index to maintain question sequence
         final questionData = questions[i].toJson();
         questionData['orderIndex'] = i;
 
@@ -324,24 +343,26 @@ class QuizSeeder {
     }
   }
 
-  // Method to check if quizzes already exist
+  /// Checks if quizzes already exist to prevent duplicates
+  /// Run this before seeding to avoid duplicate data
   static Future<bool> quizzesExist() async {
     final snapshot = await _firestore.collection('quizzes').limit(1).get();
     return snapshot.docs.isNotEmpty;
   }
 
-  // Method to clear all quizzes (use with caution!)
+  /// Clears all quizzes from database
+  /// WARNING: This is destructive! Use only for testing
   static Future<void> clearAllQuizzes() async {
     final quizzes = await _firestore.collection('quizzes').get();
 
     for (final quiz in quizzes.docs) {
-      // Delete questions subcollection
+      // Delete questions subcollection first
       final questions = await quiz.reference.collection('questions').get();
       for (final question in questions.docs) {
         await question.reference.delete();
       }
 
-      // Delete quiz document
+      // Then delete quiz document
       await quiz.reference.delete();
     }
 
@@ -349,10 +370,17 @@ class QuizSeeder {
   }
 }
 
-// Example usage - Add this to a temporary button in your app:
+// Example usage - Add this to a temporary button in admin/debug screen:
 // ElevatedButton(
 //   onPressed: () async {
 //     try {
+//       // Check if quizzes already exist
+//       if (await QuizSeeder.quizzesExist()) {
+//         ScaffoldMessenger.of(context).showSnackBar(
+//           SnackBar(content: Text('Quizzes already exist!')),
+//         );
+//         return;
+//       }
 //       await QuizSeeder.seedQuizData();
 //       ScaffoldMessenger.of(context).showSnackBar(
 //         SnackBar(content: Text('Quiz data seeded successfully!')),
