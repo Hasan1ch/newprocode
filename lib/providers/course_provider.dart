@@ -15,27 +15,32 @@ typedef Module = ModuleModel;
 typedef Lesson = LessonModel;
 typedef Progress = ProgressModel;
 
+/// Central provider for course management and learning progress
+/// Handles real-time synchronization of course enrollment and completion tracking
 class CourseProvider extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final AuthService _authService = AuthService();
   final DatabaseService _databaseService = DatabaseService();
 
-  // Add real-time subscription
+  // Real-time subscription management
   StreamSubscription<QuerySnapshot>? _progressSubscription;
   StreamSubscription<QuerySnapshot>? _modulesSubscription;
 
+  // Course data storage
   List<Course> _courses = [];
   List<Course> _enrolledCourses = [];
-  Map<String, List<Module>> _courseModules = {};
-  Map<String, Progress> _userProgress = {};
+  Map<String, List<Module>> _courseModules = {}; // courseId -> modules
+  Map<String, Progress> _userProgress = {}; // courseId -> progress
   Course? _selectedCourse;
   Module? _selectedModule;
   Lesson? _currentLesson;
+
+  // State management
   bool _isLoading = false;
   String? _error;
   bool _isInitialized = false;
 
-  // Getters
+  // Getters for UI binding
   List<Course> get courses => _courses;
   List<Course> get enrolledCourses => _enrolledCourses;
   Course? get selectedCourse => _selectedCourse;
@@ -53,6 +58,7 @@ class CourseProvider extends ChangeNotifier {
   }
 
   // Initialize real-time listeners
+  // Sets up live updates for progress and modules when user is authenticated
   Future<void> initializeRealTimeListeners() async {
     if (_isInitialized || _authService.currentUser == null) return;
 
@@ -62,6 +68,7 @@ class CourseProvider extends ChangeNotifier {
   }
 
   // Load all courses
+  // Fetches available courses and initializes real-time updates
   Future<void> loadCourses() async {
     try {
       _isLoading = true;
@@ -123,6 +130,7 @@ class CourseProvider extends ChangeNotifier {
   }
 
   // NEW: Load enrolled courses with real-time updates
+  // Listens to progress changes and automatically updates enrolled courses
   Future<void> _loadEnrolledCoursesRealtime() async {
     try {
       final userId = _authService.currentUser!.uid;
@@ -194,6 +202,7 @@ class CourseProvider extends ChangeNotifier {
   }
 
   // Load modules with real-time updates
+  // Automatically syncs module changes across all users
   void _loadModulesRealtime() {
     if (_authService.currentUser == null) return;
 
@@ -261,6 +270,7 @@ class CourseProvider extends ChangeNotifier {
   }
 
   // Enroll in a course
+  // Creates initial progress record and adds to enrolled courses
   Future<void> enrollInCourse(String courseId) async {
     try {
       final userId = _authService.currentUser!.uid;
@@ -278,6 +288,7 @@ class CourseProvider extends ChangeNotifier {
         return;
       }
 
+      // Create initial progress record
       final progress = Progress(
         id: '',
         userId: userId,
@@ -315,6 +326,7 @@ class CourseProvider extends ChangeNotifier {
   }
 
   // FIXED: Mark lesson as completed with proper XP handling
+  // Awards XP only on first completion and tracks module/course completion
   Future<void> completeLesson(
       String courseId, String moduleId, String lessonId) async {
     try {
@@ -396,6 +408,7 @@ class CourseProvider extends ChangeNotifier {
   }
 
   // Check and complete course with bonus XP
+  // Awards bonus XP and updates user stats when course is fully completed
   Future<void> _checkAndCompleteCourse(String courseId, String userId) async {
     try {
       final userDoc = await _firestore.collection('users').doc(userId).get();
@@ -427,6 +440,7 @@ class CourseProvider extends ChangeNotifier {
   }
 
   // Get next lesson
+  // Finds the next uncompleted lesson in the course
   Lesson? getNextLesson(String courseId) {
     final progress = _userProgress[courseId];
     if (progress == null) return null;
@@ -508,6 +522,7 @@ class CourseProvider extends ChangeNotifier {
   }
 
   // Search courses
+  // Filters courses by title, description, or tags
   List<Course> searchCourses(String query) {
     if (query.isEmpty) {
       return _courses;
@@ -532,6 +547,7 @@ class CourseProvider extends ChangeNotifier {
   }
 
   // Force refresh all data
+  // Cancels subscriptions and reloads fresh data
   Future<void> refresh() async {
     // Cancel existing subscriptions first
     await _cancelSubscriptions();
