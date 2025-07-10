@@ -1,19 +1,25 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Model representing a quiz
+/// Contains quiz metadata, configuration, and scoring rules
 class QuizModel {
   final String id;
   final String title;
   final String description;
+  // Links quiz to course hierarchy
   final String courseId;
-  final String? moduleId;
+  final String? moduleId; // Optional - some quizzes are course-level
+  // Quiz configuration
   final String difficulty;
   final String category;
   final int timeLimit; // in seconds
-  final int passingScore; // percentage
+  final int passingScore; // percentage required to pass
   final int totalQuestions;
+  // Gamification reward
   final int xpReward;
+  // Admin can disable quizzes temporarily
   final bool isActive;
+  // Timestamps for tracking quiz lifecycle
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -35,6 +41,7 @@ class QuizModel {
   });
 
   /// Create QuizModel from JSON
+  /// Includes sensible defaults for missing fields
   factory QuizModel.fromJson(Map<String, dynamic> json) {
     return QuizModel(
       id: json['id'] ?? '',
@@ -45,10 +52,11 @@ class QuizModel {
       difficulty: json['difficulty'] ?? 'easy',
       category: json['category'] ?? 'general',
       timeLimit: json['timeLimit'] ?? 600, // Default 10 minutes
-      passingScore: json['passingScore'] ?? 70,
+      passingScore: json['passingScore'] ?? 70, // Default 70% to pass
       totalQuestions: json['totalQuestions'] ?? 0,
-      xpReward: json['xpReward'] ?? 50,
-      isActive: json['isActive'] ?? true,
+      xpReward: json['xpReward'] ?? 50, // Default 50 XP reward
+      isActive: json['isActive'] ?? true, // Active by default
+      // Convert Firestore timestamps to DateTime
       createdAt: json['createdAt'] != null
           ? (json['createdAt'] as Timestamp).toDate()
           : null,
@@ -59,6 +67,7 @@ class QuizModel {
   }
 
   /// Convert QuizModel to JSON
+  /// Prepares data for Firestore storage
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -73,12 +82,14 @@ class QuizModel {
       'totalQuestions': totalQuestions,
       'xpReward': xpReward,
       'isActive': isActive,
+      // Convert DateTime to Firestore Timestamp
       'createdAt': createdAt != null ? Timestamp.fromDate(createdAt!) : null,
       'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
     };
   }
 
   /// Create a copy with updated fields
+  /// Used for quiz editing and state management
   QuizModel copyWith({
     String? id,
     String? title,
@@ -114,17 +125,20 @@ class QuizModel {
   }
 
   /// Get formatted time limit
+  /// Converts seconds to user-friendly format for display
   String get formattedTimeLimit {
     final minutes = timeLimit ~/ 60;
     final seconds = timeLimit % 60;
+    // Show seconds only if not a round minute value
     return seconds > 0 ? '${minutes}m ${seconds}s' : '${minutes}m';
   }
 
   /// Check if score passes
+  /// Determines if user achieved passing grade
   bool isPassing(int score) {
     return score >= passingScore;
   }
 }
 
-// Type alias for backward compatibility
+// Type alias for backward compatibility with older code
 typedef Quiz = QuizModel;
