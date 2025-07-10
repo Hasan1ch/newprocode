@@ -6,6 +6,8 @@ import 'package:procode/widgets/animations/fade_animation.dart';
 import 'package:procode/widgets/animations/slide_animation.dart';
 import 'package:shimmer/shimmer.dart';
 
+/// Main quiz hub screen that displays different quiz categories
+/// This serves as the entry point for all quiz-related activities
 class QuizCategoriesScreen extends StatefulWidget {
   const QuizCategoriesScreen({super.key});
 
@@ -31,6 +33,7 @@ class _QuizCategoriesScreenState extends State<QuizCategoriesScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Header section with motivational text
               FadeAnimation(
                 child: Text(
                   'Test Your Knowledge',
@@ -50,6 +53,8 @@ class _QuizCategoriesScreenState extends State<QuizCategoriesScreen> {
                 ),
               ),
               const SizedBox(height: 24),
+
+              // Module Quiz category - standard quiz type for course modules
               SlideAnimation(
                 child: _buildCategoryCard(
                   context,
@@ -69,6 +74,8 @@ class _QuizCategoriesScreenState extends State<QuizCategoriesScreen> {
                 ),
               ),
               const SizedBox(height: 16),
+
+              // Quick Challenge - shorter quizzes for practice
               SlideAnimation(
                 delay: 0.1,
                 child: _buildCategoryCard(
@@ -89,6 +96,8 @@ class _QuizCategoriesScreenState extends State<QuizCategoriesScreen> {
                 ),
               ),
               const SizedBox(height: 16),
+
+              // Weekly Challenge - comprehensive test with higher rewards
               SlideAnimation(
                 delay: 0.2,
                 child: _buildCategoryCard(
@@ -103,10 +112,12 @@ class _QuizCategoriesScreenState extends State<QuizCategoriesScreen> {
                     end: Alignment.bottomRight,
                   ),
                   category: 'weekly',
-                  isSpecial: true,
+                  isSpecial: true, // Shows "NEW" badge
                 ),
               ),
               const SizedBox(height: 32),
+
+              // User statistics section
               FadeAnimation(
                 delay: 0.3,
                 child: _buildStatsSection(context),
@@ -118,6 +129,8 @@ class _QuizCategoriesScreenState extends State<QuizCategoriesScreen> {
     );
   }
 
+  /// Creates a category card with gradient background and navigation
+  /// Each card represents a different quiz type with unique styling
   Widget _buildCategoryCard(
     BuildContext context, {
     required String title,
@@ -130,6 +143,7 @@ class _QuizCategoriesScreenState extends State<QuizCategoriesScreen> {
   }) {
     return GestureDetector(
       onTap: () {
+        // Navigate to quiz list for selected category
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -151,6 +165,7 @@ class _QuizCategoriesScreenState extends State<QuizCategoriesScreen> {
         ),
         child: Stack(
           children: [
+            // Special badge for new or featured quizzes
             if (isSpecial)
               Positioned(
                 top: 12,
@@ -176,6 +191,7 @@ class _QuizCategoriesScreenState extends State<QuizCategoriesScreen> {
               padding: const EdgeInsets.all(20),
               child: Row(
                 children: [
+                  // Icon container with semi-transparent background
                   Container(
                     width: 60,
                     height: 60,
@@ -190,6 +206,7 @@ class _QuizCategoriesScreenState extends State<QuizCategoriesScreen> {
                     ),
                   ),
                   const SizedBox(width: 16),
+                  // Quiz information
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -221,6 +238,7 @@ class _QuizCategoriesScreenState extends State<QuizCategoriesScreen> {
                       ],
                     ),
                   ),
+                  // Navigation arrow
                   Icon(
                     Icons.arrow_forward_ios,
                     color: Colors.white.withOpacity(0.8),
@@ -235,6 +253,8 @@ class _QuizCategoriesScreenState extends State<QuizCategoriesScreen> {
     );
   }
 
+  /// Displays user's quiz statistics in a card
+  /// Shows total quizzes taken, average score, and total XP earned
   Widget _buildStatsSection(BuildContext context) {
     final theme = Theme.of(context);
 
@@ -245,6 +265,7 @@ class _QuizCategoriesScreenState extends State<QuizCategoriesScreen> {
         final isLoading = userProvider.isLoading;
 
         // Calculate average score from quiz history if available
+        // Perfect quizzes divided by total quizzes gives us a percentage
         final avgScore = userStats != null && userStats.quizzesCompleted > 0
             ? (userStats.perfectQuizzes / userStats.quizzesCompleted * 100)
                 .toStringAsFixed(0)
@@ -260,6 +281,7 @@ class _QuizCategoriesScreenState extends State<QuizCategoriesScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Header with title and icon
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -276,6 +298,7 @@ class _QuizCategoriesScreenState extends State<QuizCategoriesScreen> {
                 ],
               ),
               const SizedBox(height: 16),
+              // Statistics row
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
@@ -306,6 +329,7 @@ class _QuizCategoriesScreenState extends State<QuizCategoriesScreen> {
     );
   }
 
+  /// Individual statistic display with icon and shimmer loading effect
   Widget _buildStat(String label, String value, IconData icon, bool isLoading) {
     final theme = Theme.of(context);
 
@@ -317,6 +341,7 @@ class _QuizCategoriesScreenState extends State<QuizCategoriesScreen> {
           size: 24,
         ),
         const SizedBox(height: 8),
+        // Show shimmer effect while loading data
         if (isLoading)
           Shimmer.fromColors(
             baseColor: Colors.grey[700]!,
