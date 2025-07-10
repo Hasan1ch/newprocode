@@ -11,6 +11,8 @@ import 'package:procode/utils/app_logger.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+/// Provider managing quiz functionality and AI-powered feedback
+/// Handles quiz flow, scoring, XP calculation, and personalized recommendations
 class QuizProvider extends ChangeNotifier {
   final DatabaseService _databaseService = DatabaseService();
   final GamificationService _gamificationService = GamificationService();
@@ -18,6 +20,7 @@ class QuizProvider extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  // Quiz state management
   List<Quiz> _availableQuizzes = [];
   Quiz? _currentQuiz;
   List<QuestionModel> _currentQuestions = [];
@@ -28,6 +31,8 @@ class QuizProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   QuizResultModel? _lastResult;
+
+  // AI-powered features
   final Map<int, String> _wrongAnswerExplanations = {};
   String? _aiFeedback;
   List<String> _recommendations = [];
@@ -36,7 +41,7 @@ class QuizProvider extends ChangeNotifier {
   // Helper to get current user ID
   String get _currentUserId => _auth.currentUser?.uid ?? '';
 
-  // Getters
+  // Getters for UI binding
   List<Quiz> get availableQuizzes => _availableQuizzes;
   Quiz? get currentQuiz => _currentQuiz;
   List<QuestionModel> get currentQuestions => _currentQuestions;
@@ -62,6 +67,7 @@ class QuizProvider extends ChangeNotifier {
       : (_currentQuestionIndex + 1) / _currentQuestions.length;
 
   // Safe notify listeners that checks if we're in a build phase
+  // Prevents setState errors during widget building
   void _safeNotifyListeners() {
     // Use scheduleMicrotask to defer notification until after the current build phase
     SchedulerBinding.instance.addPostFrameCallback((_) {
@@ -121,6 +127,7 @@ class QuizProvider extends ChangeNotifier {
   }
 
   // Start a quiz
+  // Initializes quiz state and loads questions
   Future<void> startQuiz(String quizId) async {
     _isLoading = true;
     _error = null;
@@ -187,6 +194,7 @@ class QuizProvider extends ChangeNotifier {
   }
 
   // Update remaining time
+  // Auto-submits quiz when time runs out
   void updateRemainingTime(int seconds) {
     _remainingTime = seconds;
     if (_remainingTime <= 0) {
@@ -196,6 +204,7 @@ class QuizProvider extends ChangeNotifier {
   }
 
   // Helper method to compare boolean answers
+  // Handles various formats like "true", "True", "TRUE"
   bool _compareBooleanAnswers(String userAnswer, String correctAnswer) {
     // Handle various boolean answer formats
     final userLower = userAnswer.toLowerCase().trim();
@@ -224,6 +233,7 @@ class QuizProvider extends ChangeNotifier {
   }
 
   // FIXED: Submit quiz with proper XP handling
+  // Calculates score, awards XP based on performance, and generates AI feedback
   Future<void> submitQuiz() async {
     if (_currentQuiz == null || _quizStartTime == null) return;
 
@@ -321,6 +331,7 @@ class QuizProvider extends ChangeNotifier {
       }
 
       // Calculate actual XP based on score
+      // Higher scores earn more XP
       if (score >= 90) {
         xpEarned = baseXP;
       } else if (score >= 70) {
@@ -373,7 +384,7 @@ class QuizProvider extends ChangeNotifier {
         _aiFeedback = null;
       }
 
-      // Generate learning recommendations
+      // Generate learning recommendations for wrong answers
       if (wrongQuestions.isNotEmpty) {
         try {
           _recommendations =
@@ -388,7 +399,7 @@ class QuizProvider extends ChangeNotifier {
         }
       }
 
-      // Generate motivational message
+      // Generate motivational message based on score
       try {
         _motivationalMessage =
             await _geminiService.generateMotivationalMessage(score);
@@ -462,6 +473,7 @@ class QuizProvider extends ChangeNotifier {
   }
 
   // Get quiz statistics
+  // Returns summary of quiz performance for results screen
   Map<String, dynamic> getQuizStatistics() {
     if (_lastResult == null) return {};
 
@@ -479,6 +491,7 @@ class QuizProvider extends ChangeNotifier {
   }
 
   // Get question statistics
+  // Returns detailed info for reviewing individual questions
   Map<String, dynamic> getQuestionStatistics(int questionIndex) {
     if (questionIndex >= _currentQuestions.length || _lastResult == null) {
       return {};
