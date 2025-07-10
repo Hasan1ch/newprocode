@@ -4,6 +4,8 @@ import 'package:procode/services/gemini_service.dart';
 import 'package:procode/config/theme.dart';
 import 'package:procode/config/app_colors.dart';
 
+/// AI-powered coding assistant panel for the code editor
+/// Provides contextual help, debugging assistance, and code optimization suggestions
 class AIAssistantPanel extends StatefulWidget {
   final String code;
   final String language;
@@ -29,10 +31,12 @@ class _AIAssistantPanelState extends State<AIAssistantPanel> {
   final TextEditingController _queryController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
+  // Chat state
   final List<Map<String, String>> _messages = [];
   bool _isLoading = false;
   String _selectedAction = 'explain';
 
+  // Predefined quick actions for common coding help
   final List<Map<String, dynamic>> _quickActions = [
     {
       'id': 'explain',
@@ -66,6 +70,7 @@ class _AIAssistantPanelState extends State<AIAssistantPanel> {
     _sendInitialMessage();
   }
 
+  /// Send welcome message when panel opens
   void _sendInitialMessage() {
     setState(() {
       _messages.add({
@@ -76,6 +81,8 @@ class _AIAssistantPanelState extends State<AIAssistantPanel> {
     });
   }
 
+  /// Send message to AI and get response
+  /// Includes challenge context if available
   Future<void> _sendMessage(String message) async {
     if (message.trim().isEmpty) return;
 
@@ -94,6 +101,7 @@ class _AIAssistantPanelState extends State<AIAssistantPanel> {
       // Build the question with context
       String fullQuestion = message;
 
+      // Add challenge context for better AI responses
       if (widget.challenge != null) {
         fullQuestion = '''
 $message
@@ -133,6 +141,7 @@ Description: ${widget.challenge!.description}
     }
   }
 
+  /// Auto-scroll to latest message
   void _scrollToBottom() {
     Future.delayed(const Duration(milliseconds: 100), () {
       if (_scrollController.hasClients) {
@@ -145,6 +154,7 @@ Description: ${widget.challenge!.description}
     });
   }
 
+  /// Handle quick action button press
   Future<void> _handleQuickAction(Map<String, dynamic> action) async {
     setState(() {
       _selectedAction = action['id'];
@@ -152,6 +162,7 @@ Description: ${widget.challenge!.description}
 
     String prompt = action['prompt'];
 
+    // Customize prompt for hints if challenge is available
     if (action['id'] == 'hint' && widget.challenge != null) {
       prompt += ' for the challenge: ${widget.challenge!.title}';
     }
@@ -176,7 +187,7 @@ Description: ${widget.challenge!.description}
       ),
       child: Column(
         children: [
-          // Header
+          // Header with gradient
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -212,7 +223,7 @@ Description: ${widget.challenge!.description}
             ),
           ),
 
-          // Quick Actions
+          // Quick Actions for common tasks
           Container(
             height: 80,
             padding: const EdgeInsets.symmetric(vertical: 12),
@@ -265,7 +276,7 @@ Description: ${widget.challenge!.description}
             ),
           ),
 
-          // Messages
+          // Chat Messages
           Expanded(
             child: ListView.builder(
               controller: _scrollController,
@@ -283,6 +294,7 @@ Description: ${widget.challenge!.description}
                         ? MainAxisAlignment.end
                         : MainAxisAlignment.start,
                     children: [
+                      // AI Avatar
                       if (!isUser) ...[
                         CircleAvatar(
                           radius: 16,
@@ -295,6 +307,7 @@ Description: ${widget.challenge!.description}
                         ),
                         const SizedBox(width: 8),
                       ],
+                      // Message bubble
                       Flexible(
                         child: Container(
                           padding: const EdgeInsets.all(12),
@@ -317,6 +330,7 @@ Description: ${widget.challenge!.description}
                           ),
                         ),
                       ),
+                      // User Avatar
                       if (isUser) ...[
                         const SizedBox(width: 8),
                         CircleAvatar(
@@ -336,6 +350,7 @@ Description: ${widget.challenge!.description}
             ),
           ),
 
+          // Loading indicator
           if (_isLoading)
             Padding(
               padding: const EdgeInsets.all(16),
@@ -405,6 +420,7 @@ Description: ${widget.challenge!.description}
                   ),
                 ),
                 const SizedBox(width: 8),
+                // Send button
                 Container(
                   decoration: BoxDecoration(
                     gradient: AppTheme.primaryGradient,
