@@ -4,6 +4,9 @@ import 'package:procode/models/achievement_model.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:confetti/confetti.dart';
 
+/// Achievement unlock dialog with confetti celebration
+/// This creates a rewarding moment when users earn achievements
+/// Features animations, rarity indicators, and social sharing
 class AchievementDialog extends StatefulWidget {
   final AchievementModel achievement;
 
@@ -12,10 +15,11 @@ class AchievementDialog extends StatefulWidget {
     required this.achievement,
   }) : super(key: key);
 
+  /// Static method to show the dialog easily from anywhere
   static void show(BuildContext context, AchievementModel achievement) {
     showDialog(
       context: context,
-      barrierDismissible: false,
+      barrierDismissible: false, // Force user to see their achievement
       builder: (context) => AchievementDialog(achievement: achievement),
     );
   }
@@ -35,15 +39,18 @@ class _AchievementDialogState extends State<AchievementDialog>
   void initState() {
     super.initState();
 
+    // Confetti for celebration effect
     _confettiController = ConfettiController(
       duration: const Duration(seconds: 3),
     );
 
+    // Main animation controller for dialog entrance
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
 
+    // Elastic scale animation for bouncy entrance
     _scaleAnimation = Tween<double>(
       begin: 0.8,
       end: 1.0,
@@ -52,6 +59,7 @@ class _AchievementDialogState extends State<AchievementDialog>
       curve: Curves.elasticOut,
     ));
 
+    // Subtle rotation for playful effect
     _rotateAnimation = Tween<double>(
       begin: -0.1,
       end: 0.1,
@@ -64,7 +72,7 @@ class _AchievementDialogState extends State<AchievementDialog>
     _animationController.forward();
     _confettiController.play();
 
-    // Auto dismiss after 5 seconds
+    // Auto dismiss after 5 seconds to prevent blocking
     Future.delayed(Duration(seconds: 5), () {
       if (mounted) {
         Navigator.of(context).pop();
@@ -79,6 +87,7 @@ class _AchievementDialogState extends State<AchievementDialog>
     super.dispose();
   }
 
+  /// Maps rarity to appropriate color scheme
   Color _getRarityColor() {
     switch (widget.achievement.rarity.toLowerCase()) {
       case 'common':
@@ -94,11 +103,14 @@ class _AchievementDialogState extends State<AchievementDialog>
     }
   }
 
+  /// Creates lighter shade for gradient effects
   Color _getLighterShade(Color color) {
     final hsl = HSLColor.fromColor(color);
     return hsl.withLightness((hsl.lightness + 0.2).clamp(0.0, 1.0)).toColor();
   }
 
+  /// Builds star rating based on rarity
+  /// Visual indicator of achievement importance
   Widget _getRarityStars() {
     final rarityLevel = {
           'common': 1,
@@ -126,7 +138,7 @@ class _AchievementDialogState extends State<AchievementDialog>
 
     return Stack(
       children: [
-        // Main Dialog
+        // Main Dialog with animations
         Dialog(
           backgroundColor: Colors.transparent,
           elevation: 0,
@@ -143,10 +155,12 @@ class _AchievementDialogState extends State<AchievementDialog>
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
+                      // Rarity-colored border
                       border: Border.all(
                         color: rarityColor,
                         width: 3,
                       ),
+                      // Glowing shadow effect
                       boxShadow: [
                         BoxShadow(
                           color: rarityColor.withOpacity(0.3),
@@ -158,10 +172,11 @@ class _AchievementDialogState extends State<AchievementDialog>
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Header
+                        // Achievement icon with glow
                         Stack(
                           alignment: Alignment.center,
                           children: [
+                            // Glow background
                             Container(
                               width: 100,
                               height: 100,
@@ -175,6 +190,7 @@ class _AchievementDialogState extends State<AchievementDialog>
                                 ),
                               ),
                             ),
+                            // Icon container
                             Container(
                               width: 80,
                               height: 80,
@@ -244,7 +260,7 @@ class _AchievementDialogState extends State<AchievementDialog>
 
                         SizedBox(height: 20),
 
-                        // Rewards
+                        // XP Reward Badge
                         Container(
                           padding: EdgeInsets.symmetric(
                             horizontal: 20,
@@ -280,10 +296,11 @@ class _AchievementDialogState extends State<AchievementDialog>
 
                         SizedBox(height: 24),
 
-                        // Actions
+                        // Action buttons
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
+                            // Share achievement
                             TextButton.icon(
                               onPressed: () {
                                 Share.share(
@@ -293,6 +310,7 @@ class _AchievementDialogState extends State<AchievementDialog>
                               icon: Icon(Icons.share),
                               label: Text('Share'),
                             ),
+                            // Dismiss button
                             ElevatedButton(
                               onPressed: () {
                                 Navigator.of(context).pop();
@@ -317,7 +335,7 @@ class _AchievementDialogState extends State<AchievementDialog>
           ),
         ),
 
-        // Confetti
+        // Confetti overlay
         Align(
           alignment: Alignment.topCenter,
           child: ConfettiWidget(
@@ -328,6 +346,7 @@ class _AchievementDialogState extends State<AchievementDialog>
             emissionFrequency: 0.05,
             numberOfParticles: 50,
             gravity: 0.2,
+            // Rarity-themed colors
             colors: [
               rarityColor,
               _getLighterShade(rarityColor),
