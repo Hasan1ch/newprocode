@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Model representing quiz results
+/// This stores comprehensive data about a user's quiz attempt including
+/// their performance, time taken, and detailed question-by-question results
 class QuizResultModel {
   final String id;
   final String userId;
@@ -13,6 +15,7 @@ class QuizResultModel {
   final int timeTaken; // in seconds
   final bool passed;
   final int xpEarned;
+  // Stores detailed results for each question - key is questionId
   final Map<String, QuestionResult> questionResults;
   final DateTime completedAt;
 
@@ -33,7 +36,10 @@ class QuizResultModel {
   });
 
   /// Create QuizResultModel from JSON
+  /// Handles conversion from Firestore document format including
+  /// nested question results and timestamp conversions
   factory QuizResultModel.fromJson(Map<String, dynamic> json) {
+    // Parse the nested question results map
     Map<String, QuestionResult> results = {};
     if (json['questionResults'] != null) {
       Map<String, dynamic> resultsData =
@@ -56,6 +62,7 @@ class QuizResultModel {
       passed: json['passed'] ?? false,
       xpEarned: json['xpEarned'] ?? 0,
       questionResults: results,
+      // Convert Firestore timestamp to DateTime
       completedAt: json['completedAt'] != null
           ? (json['completedAt'] as Timestamp).toDate()
           : DateTime.now(),
@@ -63,7 +70,10 @@ class QuizResultModel {
   }
 
   /// Convert QuizResultModel to JSON
+  /// Prepares data for Firestore storage including converting
+  /// DateTime to Timestamp and serializing nested question results
   Map<String, dynamic> toJson() {
+    // Convert question results to JSON format
     Map<String, dynamic> resultsJson = {};
     questionResults.forEach((key, value) {
       resultsJson[key] = value.toJson();
@@ -82,15 +92,18 @@ class QuizResultModel {
       'passed': passed,
       'xpEarned': xpEarned,
       'questionResults': resultsJson,
+      // Convert DateTime to Firestore Timestamp
       'completedAt': Timestamp.fromDate(completedAt),
     };
   }
 
   /// Get percentage score
+  /// Calculates the percentage score with safe division to avoid errors
   double get percentage =>
       totalQuestions > 0 ? (score / totalQuestions) * 100 : 0;
 
   /// Get time taken formatted
+  /// Converts seconds to a user-friendly "Xm Ys" format for display
   String get formattedTime {
     final minutes = timeTaken ~/ 60;
     final seconds = timeTaken % 60;
@@ -99,13 +112,14 @@ class QuizResultModel {
 }
 
 /// Model representing individual question result
+/// Tracks user's answer, correctness, and performance for each question
 class QuestionResult {
   final String questionId;
   final String userAnswer;
   final String correctAnswer;
   final bool isCorrect;
   final int pointsEarned;
-  final int timeTaken; // seconds
+  final int timeTaken; // seconds spent on this question
 
   QuestionResult({
     required this.questionId,
@@ -116,6 +130,7 @@ class QuestionResult {
     required this.timeTaken,
   });
 
+  // Parse from Firestore document format
   factory QuestionResult.fromJson(Map<String, dynamic> json) {
     return QuestionResult(
       questionId: json['questionId'] ?? '',
@@ -127,6 +142,7 @@ class QuestionResult {
     );
   }
 
+  // Convert to Firestore document format
   Map<String, dynamic> toJson() {
     return {
       'questionId': questionId,
@@ -139,4 +155,5 @@ class QuestionResult {
   }
 }
 
+// Type alias for backward compatibility with older code
 typedef QuizResult = QuizResultModel;
