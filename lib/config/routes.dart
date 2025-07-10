@@ -1,70 +1,77 @@
+// Navigation route definitions for the entire app
+// Centralizes all screen paths for easy maintenance and refactoring
 class Routes {
-  // Auth Routes
-  static const String splash = '/';
-  static const String login = '/login';
-  static const String register = '/register';
-  static const String forgotPassword = '/forgot-password';
-  static const String resetPassword = '/reset-password';
-  static const String verifyEmail = '/verify-email';
+  // Authentication flow routes
+  static const String splash = '/'; // App launch screen with logo
+  static const String login = '/login'; // Sign in screen
+  static const String register = '/register'; // New user registration
+  static const String forgotPassword = '/forgot-password'; // Password recovery
+  static const String resetPassword = '/reset-password'; // Set new password
+  static const String verifyEmail = '/verify-email'; // Email confirmation
 
-  // Onboarding
-  static const String onboarding = '/onboarding';
-  static const String selectLanguage = '/select-language';
-  static const String selectLevel = '/select-level';
+  // First-time user experience
+  static const String onboarding = '/onboarding'; // Welcome tutorial
+  static const String selectLanguage =
+      '/select-language'; // Programming language choice
+  static const String selectLevel = '/select-level'; // Skill level selection
 
-  // Main Navigation
-  static const String dashboard = '/dashboard';
-  static const String courses = '/courses';
-  static const String leaderboard = '/leaderboard';
-  static const String profile = '/profile';
+  // Main app navigation - bottom nav bar screens
+  static const String dashboard = '/dashboard'; // Home screen with stats
+  static const String courses = '/courses'; // Course catalog
+  static const String leaderboard = '/leaderboard'; // Competition rankings
+  static const String profile = '/profile'; // User profile
 
-  // Course Routes
-  static const String courseDetail = '/course-detail';
-  static const String moduleDetail = '/module-detail';
-  static const String lesson = '/lesson';
-  static const String codeEditor = '/code-editor';
-  static const String quiz = '/quiz';
-  static const String quizResult = '/quiz-result';
+  // Learning content navigation
+  static const String courseDetail =
+      '/course-detail'; // Course overview and modules
+  static const String moduleDetail = '/module-detail'; // Module lessons list
+  static const String lesson = '/lesson'; // Lesson content viewer
+  static const String codeEditor =
+      '/code-editor'; // Interactive coding environment
+  static const String quiz = '/quiz'; // Quiz questions screen
+  static const String quizResult = '/quiz-result'; // Quiz score display
 
-  // Profile Routes
-  static const String editProfile = '/edit-profile';
-  static const String achievements = '/achievements';
-  static const String learningStats = '/learning-stats';
-  static const String certificates = '/certificates';
+  // Profile management screens
+  static const String editProfile = '/edit-profile'; // Update user information
+  static const String achievements = '/achievements'; // Trophy collection
+  static const String learningStats = '/learning-stats'; // Progress analytics
+  static const String certificates =
+      '/certificates'; // Course completion certificates
 
-  // AI Advisor
-  static const String aiAdvisor = '/ai-advisor';
-  static const String aiChat = '/ai-chat';
-  static const String codeReview = '/code-review';
+  // AI-powered features
+  static const String aiAdvisor = '/ai-advisor'; // AI learning assistant
+  static const String aiChat = '/ai-chat'; // Chat with AI tutor
+  static const String codeReview = '/code-review'; // AI code analysis
 
-  // Settings
-  static const String settings = '/settings';
-  static const String notifications = '/notifications';
-  static const String privacy = '/privacy';
-  static const String about = '/about';
-  static const String help = '/help';
+  // App settings and preferences
+  static const String settings = '/settings'; // Main settings menu
+  static const String notifications =
+      '/notifications'; // Push notification preferences
+  static const String privacy = '/privacy'; // Privacy controls
+  static const String about = '/about'; // App information
+  static const String help = '/help'; // Support and FAQ
 
-  // Code Challenges
-  static const String codeChallenge = '/code-challenge';
-  static const String challengeList = '/challenge-list';
-  static const String challengeResult = '/challenge-result';
+  // Coding challenge features
+  static const String codeChallenge =
+      '/code-challenge'; // Individual challenge screen
+  static const String challengeList =
+      '/challenge-list'; // Browse all challenges
+  static const String challengeResult =
+      '/challenge-result'; // Challenge completion stats
 
-  // Community
-  static const String community = '/community';
-  static const String discussionThread = '/discussion-thread';
-  static const String createPost = '/create-post';
+  // Social learning features
+  static const String community = '/community'; // Discussion forum home
+  static const String discussionThread =
+      '/discussion-thread'; // Individual discussion
+  static const String createPost = '/create-post'; // New forum post
 
-  // Premium
-  static const String premium = '/premium';
-  static const String subscription = '/subscription';
-  static const String paymentSuccess = '/payment-success';
+  // Search functionality
+  static const String search = '/search'; // Search interface
+  static const String searchResults =
+      '/search-results'; // Search results listing
 
-  // Search
-  static const String search = '/search';
-  static const String searchResults = '/search-results';
-
-  // Error Pages
-  static const String error404 = '/404';
-  static const String error500 = '/500';
-  static const String noInternet = '/no-internet';
+  // Error handling screens
+  static const String error404 = '/404'; // Page not found
+  static const String error500 = '/500'; // Server error
+  static const String noInternet = '/no-internet'; // Offline state
 }
