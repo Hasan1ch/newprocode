@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:procode/config/app_colors.dart';
 
+/// Console widget displaying code execution output and test results
+/// Supports tabbed view for standard output and test case results
 class OutputConsole extends StatefulWidget {
   final String output;
   final String error;
@@ -32,6 +34,7 @@ class _OutputConsoleState extends State<OutputConsole>
   @override
   void initState() {
     super.initState();
+    // Initialize tab controller based on whether test results exist
     _tabController = TabController(
       length: widget.testResults != null ? 2 : 1,
       vsync: this,
@@ -41,6 +44,7 @@ class _OutputConsoleState extends State<OutputConsole>
   @override
   void didUpdateWidget(OutputConsole oldWidget) {
     super.didUpdateWidget(oldWidget);
+    // Recreate tab controller if test results availability changes
     if ((widget.testResults != null) != (oldWidget.testResults != null)) {
       _tabController.dispose();
       _tabController = TabController(
@@ -83,7 +87,7 @@ class _OutputConsoleState extends State<OutputConsole>
       ),
       child: Column(
         children: [
-          // Header
+          // Console Header
           Container(
             height: 48,
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -110,6 +114,7 @@ class _OutputConsoleState extends State<OutputConsole>
                   ),
                 ),
                 const Spacer(),
+                // Show running indicator and stop button when code is executing
                 if (widget.isRunning) ...[
                   SizedBox(
                     width: 16,
@@ -132,6 +137,7 @@ class _OutputConsoleState extends State<OutputConsole>
                     ),
                   ),
                 ],
+                // Clear console button
                 IconButton(
                   icon: const Icon(Icons.clear_all, size: 20),
                   onPressed: widget.onClear,
@@ -170,7 +176,7 @@ class _OutputConsoleState extends State<OutputConsole>
               ),
             ),
 
-          // Content
+          // Content area - either single output or tabbed view
           Expanded(
             child: widget.testResults != null
                 ? TabBarView(
@@ -187,10 +193,12 @@ class _OutputConsoleState extends State<OutputConsole>
     );
   }
 
+  /// Build output view showing stdout and stderr
   Widget _buildOutputView() {
     final theme = Theme.of(context);
     final hasContent = widget.output.isNotEmpty || widget.error.isNotEmpty;
 
+    // Show placeholder when no output
     if (!hasContent && !widget.isRunning) {
       return Center(
         child: Column(
@@ -214,6 +222,7 @@ class _OutputConsoleState extends State<OutputConsole>
       );
     }
 
+    // Terminal-style output display
     return Container(
       color: const Color(0xFF1E1E1E),
       child: SingleChildScrollView(
@@ -222,6 +231,7 @@ class _OutputConsoleState extends State<OutputConsole>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Standard output in white
             if (widget.output.isNotEmpty)
               SelectableText(
                 widget.output,
@@ -232,6 +242,7 @@ class _OutputConsoleState extends State<OutputConsole>
                   height: 1.5,
                 ),
               ),
+            // Error output in red
             if (widget.error.isNotEmpty) ...[
               if (widget.output.isNotEmpty) const SizedBox(height: 16),
               SelectableText(
@@ -244,6 +255,7 @@ class _OutputConsoleState extends State<OutputConsole>
                 ),
               ),
             ],
+            // Running indicator
             if (widget.isRunning) ...[
               const SizedBox(height: 8),
               const Text(
@@ -262,6 +274,7 @@ class _OutputConsoleState extends State<OutputConsole>
     );
   }
 
+  /// Build test results view showing pass/fail for each test case
   Widget _buildTestResultsView() {
     final theme = Theme.of(context);
     final results = widget.testResults ?? [];
@@ -277,13 +290,14 @@ class _OutputConsoleState extends State<OutputConsole>
       );
     }
 
+    // Calculate test summary
     final passedTests = results.where((r) => r['passed'] == true).length;
     final totalTests = results.length;
     final allPassed = passedTests == totalTests;
 
     return Column(
       children: [
-        // Summary
+        // Test Summary Banner
         Container(
           padding: const EdgeInsets.all(16),
           color: allPassed
@@ -306,7 +320,7 @@ class _OutputConsoleState extends State<OutputConsole>
             ],
           ),
         ),
-        // Test Results List
+        // Individual Test Results
         Expanded(
           child: ListView.builder(
             controller: _testScrollController,
@@ -371,6 +385,7 @@ class _OutputConsoleState extends State<OutputConsole>
     );
   }
 
+  /// Build test detail display with formatted output
   Widget _buildTestDetail(String label, dynamic value) {
     final theme = Theme.of(context);
 
