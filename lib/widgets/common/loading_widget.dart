@@ -1,16 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 
+/// Different loading animation styles
 enum LoadingType { circular, linear, shimmer, dots, custom }
 
+/// Predefined sizes for loading indicators
 enum LoadingSize { small, medium, large }
 
+/// Versatile loading widget supporting multiple animation styles
+/// This provides consistent loading states throughout ProCode
+/// Supports circular, linear, shimmer, and custom animations
 class LoadingWidget extends StatelessWidget {
   final LoadingType type;
   final LoadingSize size;
   final String? message;
   final Color? color;
-  final double? value;
+  final double? value; // For determinate progress
   final Widget? customLoader;
 
   const LoadingWidget({
@@ -33,6 +38,7 @@ class LoadingWidget extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           _buildLoader(context, loaderColor),
+          // Optional loading message
           if (message != null) ...[
             const SizedBox(height: 16),
             Text(
@@ -46,6 +52,7 @@ class LoadingWidget extends StatelessWidget {
     );
   }
 
+  /// Builds the appropriate loader based on type
   Widget _buildLoader(BuildContext context, Color loaderColor) {
     switch (type) {
       case LoadingType.circular:
@@ -61,18 +68,20 @@ class LoadingWidget extends StatelessWidget {
     }
   }
 
+  /// Standard circular progress indicator
   Widget _buildCircularLoader(Color color) {
     return SizedBox(
       width: _getLoaderSize(),
       height: _getLoaderSize(),
       child: CircularProgressIndicator(
         valueColor: AlwaysStoppedAnimation<Color>(color),
-        value: value,
+        value: value, // null for indeterminate
         strokeWidth: _getStrokeWidth(),
       ),
     );
   }
 
+  /// Linear progress bar
   Widget _buildLinearLoader(Color color) {
     return SizedBox(
       width: _getLinearLoaderWidth(),
@@ -84,6 +93,7 @@ class LoadingWidget extends StatelessWidget {
     );
   }
 
+  /// Shimmer effect for skeleton loading
   Widget _buildShimmerLoader(BuildContext context) {
     return Shimmer.fromColors(
       baseColor: Theme.of(context).colorScheme.surface,
@@ -99,6 +109,8 @@ class LoadingWidget extends StatelessWidget {
     );
   }
 
+  /// Animated dots loader (placeholder implementation)
+  /// TODO: Implement actual dots animation
   Widget _buildDotsLoader(Color color) {
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -121,6 +133,7 @@ class LoadingWidget extends StatelessWidget {
     );
   }
 
+  /// Returns size based on LoadingSize
   double _getLoaderSize() {
     switch (size) {
       case LoadingSize.small:
@@ -132,6 +145,7 @@ class LoadingWidget extends StatelessWidget {
     }
   }
 
+  /// Returns stroke width for circular loader
   double _getStrokeWidth() {
     switch (size) {
       case LoadingSize.small:
@@ -143,6 +157,7 @@ class LoadingWidget extends StatelessWidget {
     }
   }
 
+  /// Returns width for linear loader
   double _getLinearLoaderWidth() {
     switch (size) {
       case LoadingSize.small:
@@ -154,6 +169,7 @@ class LoadingWidget extends StatelessWidget {
     }
   }
 
+  /// Returns height for linear loader
   double _getLinearLoaderHeight() {
     switch (size) {
       case LoadingSize.small:
@@ -165,6 +181,7 @@ class LoadingWidget extends StatelessWidget {
     }
   }
 
+  /// Returns size for dot loader
   double _getDotSize() {
     switch (size) {
       case LoadingSize.small:
@@ -177,6 +194,8 @@ class LoadingWidget extends StatelessWidget {
   }
 }
 
+/// Placeholder animation class for dots loader
+/// TODO: Implement actual animation logic
 class _DotAnimation extends Animation<double>
     with AnimationWithParentMixin<double> {
   final int index;
@@ -189,7 +208,8 @@ class _DotAnimation extends Animation<double>
   double get value => 0;
 }
 
-// Page Loading Widget
+/// Full-page loading screen
+/// Used during initial data loading or navigation
 class PageLoadingWidget extends StatelessWidget {
   final String? message;
 
@@ -207,7 +227,8 @@ class PageLoadingWidget extends StatelessWidget {
   }
 }
 
-// Loading Overlay
+/// Loading overlay that can be placed over existing content
+/// Useful for form submissions or async operations
 class LoadingOverlay extends StatelessWidget {
   final Widget child;
   final bool isLoading;
@@ -227,6 +248,7 @@ class LoadingOverlay extends StatelessWidget {
     return Stack(
       children: [
         child,
+        // Show overlay only when loading
         if (isLoading)
           Container(
             color: backgroundColor ?? Colors.black.withOpacity(0.5),
@@ -234,7 +256,7 @@ class LoadingOverlay extends StatelessWidget {
               type: LoadingType.circular,
               size: LoadingSize.medium,
               message: message,
-              color: Colors.white,
+              color: Colors.white, // White loader on dark overlay
             ),
           ),
       ],
@@ -242,7 +264,10 @@ class LoadingOverlay extends StatelessWidget {
   }
 }
 
-// Shimmer Loading Widgets
+// Shimmer Loading Widgets for skeleton screens
+
+/// Shimmer list for loading state of list views
+/// Creates realistic skeleton loading effect
 class ShimmerList extends StatelessWidget {
   final int itemCount;
   final double itemHeight;
@@ -267,6 +292,8 @@ class ShimmerList extends StatelessWidget {
   }
 }
 
+/// Individual shimmer list item
+/// Mimics typical list item layout
 class ShimmerListItem extends StatelessWidget {
   final double height;
 
@@ -282,12 +309,14 @@ class ShimmerListItem extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Avatar placeholder
             Container(
               width: height,
               height: height,
               color: Colors.white,
             ),
             const SizedBox(width: 16),
+            // Text placeholders
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -319,6 +348,7 @@ class ShimmerListItem extends StatelessWidget {
   }
 }
 
+/// Shimmer grid for loading state of grid views
 class ShimmerGrid extends StatelessWidget {
   final int itemCount;
   final int crossAxisCount;
@@ -351,6 +381,7 @@ class ShimmerGrid extends StatelessWidget {
   }
 }
 
+/// Individual shimmer grid item
 class ShimmerGridItem extends StatelessWidget {
   const ShimmerGridItem({Key? key}) : super(key: key);
 
@@ -369,12 +400,13 @@ class ShimmerGridItem extends StatelessWidget {
   }
 }
 
-// Custom Progress Indicators
+/// Custom circular progress with percentage display
+/// Used for showing download or upload progress
 class CustomCircularProgress extends StatefulWidget {
   final double size;
   final double strokeWidth;
   final Color? color;
-  final double value;
+  final double value; // 0.0 to 1.0
   final Widget? child;
 
   const CustomCircularProgress({
@@ -416,6 +448,7 @@ class _CustomCircularProgressState extends State<CustomCircularProgress>
   void didUpdateWidget(CustomCircularProgress oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.value != widget.value) {
+      // Animate from current value to new value
       _animation = Tween<double>(
         begin: _animation.value,
         end: widget.value,
@@ -449,6 +482,7 @@ class _CustomCircularProgressState extends State<CustomCircularProgress>
             strokeWidth: widget.strokeWidth,
           ),
           child: Center(
+            // Show percentage or custom child
             child: widget.child ??
                 Text(
                   '${(_animation.value * 100).toInt()}%',
@@ -463,6 +497,7 @@ class _CustomCircularProgressState extends State<CustomCircularProgress>
   }
 }
 
+/// Custom painter for circular progress
 class _CircularProgressPainter extends CustomPainter {
   final double value;
   final Color color;
@@ -492,8 +527,9 @@ class _CircularProgressPainter extends CustomPainter {
       ..color = color
       ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
+      ..strokeCap = StrokeCap.round; // Rounded ends
 
+    // Start from top (-90 degrees)
     final startAngle = -90 * (3.14159 / 180);
     final sweepAngle = 360 * value * (3.14159 / 180);
 
