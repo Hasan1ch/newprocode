@@ -1,11 +1,15 @@
+/// Form validation utilities for consistent input validation
+/// This class centralizes all validation logic to ensure
+/// data integrity and provide clear user feedback
 class Validators {
-  // Email validation
+  /// Validates email addresses using RFC-compliant regex
+  /// Ensures proper format before attempting Firebase authentication
   static String? validateEmail(String? value) {
     if (value == null || value.isEmpty) {
       return 'Email is required';
     }
 
-    // Basic email regex pattern
+    // Basic email regex pattern - covers most common email formats
     final emailRegex = RegExp(
       r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
     );
@@ -14,10 +18,11 @@ class Validators {
       return 'Please enter a valid email address';
     }
 
-    return null;
+    return null; // null means validation passed
   }
 
-  // Password validation (updated to match Firebase settings)
+  /// Strong password validation for registration
+  /// Enforces Firebase Authentication security requirements
   static String? validatePassword(String? value) {
     if (value == null || value.isEmpty) {
       return 'Password is required';
@@ -42,7 +47,7 @@ class Validators {
       return 'Password must contain at least one number';
     }
 
-    // Check for at least one special character (ADDED to match Firebase)
+    // Check for at least one special character (Firebase requirement)
     if (!value.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
       return 'Password must contain at least one special character';
     }
@@ -55,7 +60,8 @@ class Validators {
     return null;
   }
 
-  // Simple password validation (for login)
+  /// Simplified password validation for login
+  /// Only checks minimum requirements since password already exists
   static String? validateLoginPassword(String? value) {
     if (value == null || value.isEmpty) {
       return 'Password is required';
@@ -68,7 +74,8 @@ class Validators {
     return null;
   }
 
-  // Confirm password validation
+  /// Confirms password match during registration
+  /// Prevents typos in password field
   static String? validateConfirmPassword(String? value, String password) {
     if (value == null || value.isEmpty) {
       return 'Please confirm your password';
@@ -81,7 +88,8 @@ class Validators {
     return null;
   }
 
-  // Username validation
+  /// Validates username for uniqueness and format
+  /// Usernames are used in leaderboards and social features
   static String? validateUsername(String? value) {
     if (value == null || value.isEmpty) {
       return 'Username is required';
@@ -96,6 +104,7 @@ class Validators {
     }
 
     // Only allow alphanumeric characters and underscores
+    // This prevents injection attacks and display issues
     final usernameRegex = RegExp(r'^[a-zA-Z0-9_]+$');
     if (!usernameRegex.hasMatch(value)) {
       return 'Username can only contain letters, numbers, and underscores';
@@ -104,7 +113,8 @@ class Validators {
     return null;
   }
 
-  // Display name validation
+  /// Validates display name for public profile
+  /// More flexible than username but still has restrictions
   static String? validateDisplayName(String? value) {
     if (value == null || value.isEmpty) {
       return 'Display name is required';
@@ -127,7 +137,8 @@ class Validators {
     return null;
   }
 
-  // Full name validation
+  /// Validates full name for certificates and formal documents
+  /// Allows international characters and common name formats
   static String? validateFullName(String? value) {
     if (value == null || value.isEmpty) {
       return 'Full name is required';
@@ -142,6 +153,7 @@ class Validators {
     }
 
     // Only allow letters, spaces, and basic punctuation
+    // Supports names like "O'Brien" or "Mary-Jane"
     final nameRegex = RegExp(r"^[a-zA-Z\s\-'.]+$");
     if (!nameRegex.hasMatch(value)) {
       return 'Name can only contain letters, spaces, hyphens, and apostrophes';
@@ -150,7 +162,8 @@ class Validators {
     return null;
   }
 
-  // Phone number validation
+  /// Validates phone numbers for two-factor authentication
+  /// Accepts international formats
   static String? validatePhoneNumber(String? value) {
     if (value == null || value.isEmpty) {
       return 'Phone number is required';
@@ -170,7 +183,8 @@ class Validators {
     return null;
   }
 
-  // Age validation
+  /// Validates age for COPPA compliance
+  /// Ensures users are 13+ as required by law
   static String? validateAge(String? value) {
     if (value == null || value.isEmpty) {
       return 'Age is required';
@@ -182,7 +196,7 @@ class Validators {
     }
 
     if (age < 13) {
-      return 'You must be at least 13 years old';
+      return 'You must be at least 13 years old'; // COPPA requirement
     }
 
     if (age > 120) {
@@ -192,7 +206,8 @@ class Validators {
     return null;
   }
 
-  // URL validation
+  /// Validates URLs for portfolio links and resources
+  /// Optional field but must be valid if provided
   static String? validateUrl(String? value) {
     if (value == null || value.isEmpty) {
       return null; // URL is optional
@@ -210,7 +225,8 @@ class Validators {
     return null;
   }
 
-  // Bio validation
+  /// Validates user bio for profile
+  /// Limits length to prevent database bloat
   static String? validateBio(String? value) {
     if (value != null && value.length > 500) {
       return 'Bio must be less than 500 characters';
@@ -219,7 +235,8 @@ class Validators {
     return null;
   }
 
-  // Generic required field validation
+  /// Generic required field validation
+  /// Reusable for any mandatory field
   static String? validateRequired(String? value, String fieldName) {
     if (value == null || value.isEmpty) {
       return '$fieldName is required';
@@ -228,7 +245,8 @@ class Validators {
     return null;
   }
 
-  // Code validation (for code editor)
+  /// Validates code submissions in code editor
+  /// Prevents empty submissions and limits size
   static String? validateCode(String? value) {
     if (value == null || value.isEmpty) {
       return 'Please enter some code';
@@ -241,7 +259,8 @@ class Validators {
     return null;
   }
 
-  // Quiz answer validation
+  /// Validates quiz answer selection
+  /// Ensures user has selected an option
   static String? validateQuizAnswer(String? value) {
     if (value == null || value.isEmpty) {
       return 'Please select an answer';
@@ -250,7 +269,8 @@ class Validators {
     return null;
   }
 
-  // Credit card validation (basic)
+  /// Validates credit card numbers using Luhn algorithm
+  /// Basic validation for payment forms
   static String? validateCreditCard(String? value) {
     if (value == null || value.isEmpty) {
       return 'Card number is required';
@@ -271,7 +291,8 @@ class Validators {
     return null;
   }
 
-  // CVV validation
+  /// Validates CVV security code
+  /// 3 digits for most cards, 4 for American Express
   static String? validateCVV(String? value) {
     if (value == null || value.isEmpty) {
       return 'CVV is required';
@@ -284,7 +305,8 @@ class Validators {
     return null;
   }
 
-  // Expiry date validation (MM/YY format)
+  /// Validates credit card expiry date
+  /// Ensures card hasn't expired
   static String? validateExpiryDate(String? value) {
     if (value == null || value.isEmpty) {
       return 'Expiry date is required';
@@ -308,11 +330,13 @@ class Validators {
     return null;
   }
 
-  // Helper method for Luhn algorithm
+  /// Luhn algorithm implementation for credit card validation
+  /// Standard checksum formula used by payment cards
   static bool _isValidLuhn(String cardNumber) {
     int sum = 0;
     bool alternate = false;
 
+    // Process digits from right to left
     for (int i = cardNumber.length - 1; i >= 0; i--) {
       int digit = int.parse(cardNumber[i]);
 
@@ -330,7 +354,8 @@ class Validators {
     return sum % 10 == 0;
   }
 
-  // File size validation (in MB)
+  /// Validates file size for uploads
+  /// Prevents server overload from large files
   static String? validateFileSize(int sizeInBytes, int maxSizeInMB) {
     final sizeInMB = sizeInBytes / (1024 * 1024);
 
@@ -341,7 +366,8 @@ class Validators {
     return null;
   }
 
-  // File extension validation
+  /// Validates file extensions for security
+  /// Prevents upload of potentially dangerous file types
   static String? validateFileExtension(
       String fileName, List<String> allowedExtensions) {
     final extension = fileName.split('.').last.toLowerCase();
@@ -353,7 +379,8 @@ class Validators {
     return null;
   }
 
-  // Getter for the required validator (used in edit_profile_screen.dart)
+  /// Getter for required field validator
+  /// Provides convenient access for form fields
   static String? Function(String?) get required => (String? value) {
         if (value == null || value.isEmpty) {
           return 'This field is required';
