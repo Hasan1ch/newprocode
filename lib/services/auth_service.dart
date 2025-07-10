@@ -8,30 +8,33 @@ import 'package:procode/services/email_service.dart';
 import 'package:procode/utils/app_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// Authentication service handling all auth operations
+/// Includes email/password, Google Sign-In, and rate limiting
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
   final DatabaseService _databaseService = DatabaseService();
   final EmailService _emailService = EmailService();
 
-  // Rate limiting variables
+  // Rate limiting to prevent brute force attacks
   final Map<String, List<DateTime>> _loginAttempts = {};
   static const int _maxLoginAttempts = 5;
   static const Duration _rateLimitDuration = Duration(minutes: 15);
 
-  // Get current user
+  // Get current authenticated user
   User? get currentUser => _auth.currentUser;
 
-  // Stream of auth state changes
+  // Stream of auth state changes for reactive UI updates
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
-  // Check if user is logged in
+  // Quick check if user is logged in
   bool get isLoggedIn => currentUser != null;
 
-  // Check if email is verified
+  // Check if user has verified their email
   bool get isEmailVerified => currentUser?.emailVerified ?? false;
 
-  // Sign up with email and password (matching AuthProvider's expected method name)
+  /// Sign up with email and password (matching AuthProvider's expected method name)
+  /// Creates Firebase Auth user but doesn't create Firestore document
   Future<UserCredential> signUp({
     required String email,
     required String password,
@@ -51,13 +54,13 @@ class AuthService {
     }
   }
 
-  // Sign in with email and password (matching AuthProvider's expected method name)
+  /// Sign in with email and password with rate limiting
   Future<UserCredential> signIn({
     required String email,
     required String password,
   }) async {
     try {
-      // Check rate limiting
+      // Check if user has exceeded login attempts
       _checkRateLimit(email);
 
       UserCredential result = await _auth.signInWithEmailAndPassword(
@@ -70,7 +73,7 @@ class AuthService {
 
       return result;
     } on FirebaseAuthException catch (e) {
-      // Record failed login attempt
+      // Record failed attempt for rate limiting
       _recordFailedLoginAttempt(email);
       AppLogger.error('Sign in error: ${e.message}', error: e);
       throw _handleAuthException(e);
@@ -80,10 +83,10 @@ class AuthService {
     }
   }
 
-  // Sign out (matching AuthProvider's expected method name)
+  /// Sign out from all auth providers
   Future<void> signOut() async {
     try {
-      // Sign out from Google if signed in
+      // Sign out from Google if user signed in with Google
       if (await _googleSignIn.isSignedIn()) {
         await _googleSignIn.signOut();
       }
@@ -91,7 +94,7 @@ class AuthService {
       // Sign out from Firebase
       await _auth.signOut();
 
-      // Clear saved preferences
+      // Clear saved preferences for remember me functionality
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('rememberMe');
       await prefs.remove('savedEmail');
@@ -104,7 +107,7 @@ class AuthService {
     }
   }
 
-  // Send verification email (matching AuthProvider's expected method name)
+  /// Send email verification to current user
   Future<void> sendVerificationEmail() async {
     try {
       User? user = currentUser;
@@ -120,7 +123,8 @@ class AuthService {
     }
   }
 
-  // Email/Password Registration (keeping for backward compatibility)
+  /// Complete registration flow with username and profile creation
+  /// This method creates the Firestore user document after auth
   Future<UserModel?> registerWithEmailPassword({
     required String email,
     required String password,
@@ -128,7 +132,7 @@ class AuthService {
     required String displayName,
   }) async {
     try {
-      // Check username availability
+      // Check if username is available before creating account
       bool isUsernameAvailable =
           await _databaseService.checkUsernameAvailability(username);
       if (!isUsernameAvailable) {
@@ -141,10 +145,10 @@ class AuthService {
       User? user = result.user;
       if (user == null) throw Exception('Failed to create user');
 
-      // Send verification email
+      // Send verification email immediately
       await sendVerificationEmail();
 
-      // Create user document in Firestore
+      // Create user document in Firestore with initial data
       UserModel newUser = UserModel(
         id: user.uid,
         uid: user.uid,
@@ -172,7 +176,7 @@ class AuthService {
 
       await _databaseService.createUser(newUser);
 
-      // Reserve username
+      // Reserve username to prevent duplicates
       await _databaseService.reserveUsername(username.trim(), user.uid);
 
       AppLogger.info('User registered successfully: ${user.uid}');
@@ -183,7 +187,7 @@ class AuthService {
     }
   }
 
-  // Email/Password Login (keeping for backward compatibility)
+  /// Login with email/password and remember me functionality
   Future<UserModel?> loginWithEmailPassword({
     required String email,
     required String password,
@@ -195,7 +199,7 @@ class AuthService {
       User? user = result.user;
       if (user == null) throw Exception('Failed to login');
 
-      // Save remember me preference
+      // Save email for remember me feature
       if (rememberMe) {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('rememberMe', true);
@@ -203,10 +207,10 @@ class AuthService {
         await prefs.setString('saved_email', email);
       }
 
-      // Update last login date
+      // Update last login date for streak tracking
       await _databaseService.updateLastLoginDate(user.uid);
 
-      // Get user data
+      // Get user data from Firestore
       UserModel? userModel = await _databaseService.getUser(user.uid);
 
       AppLogger.info('User logged in successfully: ${user.uid}');
@@ -217,22 +221,21 @@ class AuthService {
     }
   }
 
-  // Google Sign In with web support
+  /// Google Sign In with web support and automatic user creation
   Future<UserModel?> signInWithGoogle() async {
     try {
-      // For web, use signInSilently first to avoid the deprecated warning
+      // Handle Google Sign-In differently for web
       GoogleSignInAccount? googleUser;
 
       if (kIsWeb) {
-        // Try silent sign-in first for web
+        // Try silent sign-in first for web to avoid deprecated warning
         try {
           googleUser = await _googleSignIn.signInSilently();
         } catch (e) {
-          // Silent sign-in failed, proceed with regular sign-in
           AppLogger.info('Silent sign-in failed, trying regular sign-in');
         }
 
-        // If silent sign-in fails, use the regular sign-in
+        // If silent sign-in fails, use regular sign-in
         if (googleUser == null) {
           googleUser = await _googleSignIn.signIn();
         }
@@ -245,11 +248,11 @@ class AuthService {
         throw Exception('Google sign in cancelled');
       }
 
-      // Get auth details
+      // Get auth details from Google
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
 
-      // Create credential
+      // Create Firebase credential
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
@@ -260,15 +263,14 @@ class AuthService {
       User? user = result.user;
       if (user == null) throw Exception('Failed to sign in with Google');
 
-      // Check if user exists in database
+      // Check if user already exists
       UserModel? existingUser = await _databaseService.getUser(user.uid);
 
       if (existingUser == null) {
-        // Generate unique username from email
+        // New Google user - create profile
         String baseUsername = user.email?.split('@')[0] ?? 'user';
         String username = await _generateUniqueUsername(baseUsername);
 
-        // Create new user
         UserModel newUser = UserModel(
           id: user.uid,
           uid: user.uid,
@@ -302,7 +304,7 @@ class AuthService {
         AppLogger.info('New Google user created: ${user.uid}');
         return newUser;
       } else {
-        // Update last login
+        // Existing user - update last login
         await _databaseService.updateLastLoginDate(user.uid);
         AppLogger.info('Existing Google user logged in: ${user.uid}');
         return existingUser;
@@ -313,17 +315,18 @@ class AuthService {
     }
   }
 
-  // Check email verification status
+  /// Check if user's email is verified and update database
   Future<bool> checkEmailVerification() async {
     try {
       User? user = currentUser;
       if (user == null) return false;
 
+      // Reload user to get latest verification status
       await user.reload();
       user = _auth.currentUser;
 
       if (user?.emailVerified ?? false) {
-        // Update user document
+        // Update verification status in Firestore
         await _databaseService.updateEmailVerificationStatus(user!.uid, true);
         return true;
       }
@@ -334,7 +337,7 @@ class AuthService {
     }
   }
 
-  // Password reset
+  /// Send password reset email
   Future<void> sendPasswordResetEmail(String email) async {
     try {
       await _auth.sendPasswordResetEmail(email: email.trim());
@@ -348,7 +351,7 @@ class AuthService {
     }
   }
 
-  // Update password
+  /// Update user password with reauthentication
   Future<void> updatePassword(
       String currentPassword, String newPassword) async {
     try {
@@ -357,7 +360,7 @@ class AuthService {
       if (user.email == null)
         throw Exception('No email associated with account');
 
-      // Re-authenticate user
+      // Re-authenticate user for security
       AuthCredential credential = EmailAuthProvider.credential(
         email: user.email!,
         password: currentPassword,
@@ -376,14 +379,15 @@ class AuthService {
     }
   }
 
-  // Delete account
+  /// Delete user account with proper cleanup
   Future<void> deleteAccount(String password) async {
     try {
       User? user = currentUser;
       if (user == null) throw Exception('No user logged in');
 
-      // Re-authenticate for security
+      // Re-authenticate based on provider
       if (user.email != null && password.isNotEmpty) {
+        // Email/password user
         AuthCredential credential = EmailAuthProvider.credential(
           email: user.email!,
           password: password,
@@ -391,7 +395,7 @@ class AuthService {
         await user.reauthenticateWithCredential(credential);
       } else if (user.providerData
           .any((info) => info.providerId == 'google.com')) {
-        // Re-authenticate with Google
+        // Google user
         final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
         if (googleUser == null)
           throw Exception('Google re-authentication cancelled');
@@ -405,10 +409,10 @@ class AuthService {
         await user.reauthenticateWithCredential(credential);
       }
 
-      // Delete user data from Firestore
+      // Delete user data from Firestore first
       await _databaseService.deleteUser(user.uid);
 
-      // Delete user from Firebase Auth
+      // Then delete from Firebase Auth
       await user.delete();
 
       AppLogger.info('Account deleted successfully');
@@ -421,12 +425,12 @@ class AuthService {
     }
   }
 
-  // Logout (keeping for backward compatibility)
+  /// Logout (keeping for backward compatibility)
   Future<void> logout() async {
     return signOut();
   }
 
-  // Save email for remember me functionality
+  /// Save email for remember me functionality
   Future<void> saveEmail(String email) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -436,7 +440,7 @@ class AuthService {
     }
   }
 
-  // Get saved email
+  /// Get saved email for login screen
   Future<String?> getSavedEmail() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -448,7 +452,7 @@ class AuthService {
     }
   }
 
-  // Clear saved email
+  /// Clear saved email when remember me is unchecked
   Future<void> clearSavedEmail() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -459,11 +463,11 @@ class AuthService {
     }
   }
 
-  // Rate limiting methods
+  /// Check if user has exceeded login attempts
   void _checkRateLimit(String email) {
     final attempts = _loginAttempts[email] ?? [];
 
-    // Remove old attempts
+    // Remove old attempts outside the rate limit window
     final now = DateTime.now();
     attempts
         .removeWhere((attempt) => now.difference(attempt) > _rateLimitDuration);
@@ -473,13 +477,15 @@ class AuthService {
     }
   }
 
+  /// Record failed login attempt for rate limiting
   void _recordFailedLoginAttempt(String email) {
     _loginAttempts[email] ??= [];
     _loginAttempts[email]!.add(DateTime.now());
   }
 
-  // Generate unique username
+  /// Generate unique username from base (e.g., email prefix)
   Future<String> _generateUniqueUsername(String base) async {
+    // Clean the base username
     String username = base.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '');
     if (username.length < 3) username = 'user$username';
     if (username.length > 15) username = username.substring(0, 15);
@@ -487,6 +493,7 @@ class AuthService {
     int counter = 1;
     String testUsername = username;
 
+    // Keep trying until we find an available username
     while (!await _databaseService.checkUsernameAvailability(testUsername)) {
       testUsername = '$username$counter';
       counter++;
@@ -502,7 +509,7 @@ class AuthService {
     return testUsername;
   }
 
-  // Handle Firebase Auth exceptions
+  /// Convert Firebase Auth exceptions to user-friendly messages
   String _handleAuthException(FirebaseAuthException e) {
     switch (e.code) {
       case 'user-not-found':
