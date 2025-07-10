@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:procode/config/app_colors.dart';
 
+/// Types of gradients supported by the container
 enum GradientType { linear, radial, sweep }
 
+/// Predefined gradient directions for easy use
 enum GradientDirection { horizontal, vertical, diagonal, diagonalReverse }
 
+/// Versatile gradient container widget for creating beautiful UI elements
+/// This is the foundation for all gradient effects in ProCode
+/// Supports linear, radial, and sweep gradients with full customization
 class GradientContainer extends StatelessWidget {
   final Widget child;
   final List<Color>? colors;
@@ -55,6 +60,7 @@ class GradientContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Use primary colors if none provided
     final gradientColors = colors ?? [AppColors.primary, AppColors.primaryDark];
 
     return Container(
@@ -63,13 +69,14 @@ class GradientContainer extends StatelessWidget {
       margin: margin,
       decoration: BoxDecoration(
         gradient: _buildGradient(gradientColors),
+        // BorderRadius not applicable for circles
         borderRadius: shape == BoxShape.circle ? null : borderRadius,
         shape: shape,
         border: border,
         boxShadow: boxShadow,
       ),
       child: Material(
-        color: Colors.transparent,
+        color: Colors.transparent, // Preserve gradient visibility
         child: Padding(
           padding: padding ?? EdgeInsets.zero,
           child: child,
@@ -78,6 +85,7 @@ class GradientContainer extends StatelessWidget {
     );
   }
 
+  /// Creates the appropriate gradient based on type
   Gradient _buildGradient(List<Color> colors) {
     switch (type) {
       case GradientType.linear:
@@ -101,13 +109,14 @@ class GradientContainer extends StatelessWidget {
           colors: colors,
           center: center ?? Alignment.center,
           startAngle: startAngle ?? 0.0,
-          endAngle: endAngle ?? 3.14 * 2,
+          endAngle: endAngle ?? 3.14 * 2, // Full circle
           stops: stops,
           tileMode: tileMode,
         );
     }
   }
 
+  /// Gets starting alignment based on direction
   AlignmentGeometry _getBeginAlignment() {
     switch (direction) {
       case GradientDirection.horizontal:
@@ -121,6 +130,7 @@ class GradientContainer extends StatelessWidget {
     }
   }
 
+  /// Gets ending alignment based on direction
   AlignmentGeometry _getEndAlignment() {
     switch (direction) {
       case GradientDirection.horizontal:
@@ -135,7 +145,9 @@ class GradientContainer extends StatelessWidget {
   }
 }
 
-// Specialized Gradient Containers
+// Specialized Gradient Containers with preset colors
+
+/// Primary gradient using brand colors
 class PrimaryGradientContainer extends GradientContainer {
   const PrimaryGradientContainer({
     super.key,
@@ -152,6 +164,7 @@ class PrimaryGradientContainer extends GradientContainer {
         );
 }
 
+/// Secondary gradient for alternative styling
 class SecondaryGradientContainer extends GradientContainer {
   const SecondaryGradientContainer({
     super.key,
@@ -168,6 +181,7 @@ class SecondaryGradientContainer extends GradientContainer {
         );
 }
 
+/// Success gradient for positive feedback
 class SuccessGradientContainer extends GradientContainer {
   const SuccessGradientContainer({
     super.key,
@@ -184,7 +198,8 @@ class SuccessGradientContainer extends GradientContainer {
         );
 }
 
-// Gradient Card
+/// Gradient card with elevation and tap functionality
+/// Perfect for course cards and interactive elements
 class GradientCard extends StatelessWidget {
   final Widget child;
   final List<Color>? colors;
@@ -219,6 +234,7 @@ class GradientCard extends StatelessWidget {
       width: width,
       height: height,
       borderRadius: BorderRadius.circular(16),
+      // Dynamic shadow based on gradient color
       boxShadow: [
         BoxShadow(
           color: (colors?.first ?? AppColors.primary).withOpacity(0.3),
@@ -235,7 +251,8 @@ class GradientCard extends StatelessWidget {
   }
 }
 
-// Gradient Background
+/// Full-screen gradient background
+/// Used for splash screens and decorative backgrounds
 class GradientBackground extends StatelessWidget {
   final Widget child;
   final List<Color>? colors;
@@ -263,7 +280,8 @@ class GradientBackground extends StatelessWidget {
   }
 }
 
-// Gradient AppBar
+/// Gradient app bar for premium feel
+/// Replaces standard app bar with gradient background
 class GradientAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String? title;
   final List<Widget>? actions;
@@ -296,6 +314,7 @@ class GradientAppBar extends StatelessWidget implements PreferredSizeWidget {
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),
+        // Subtle shadow for depth
         boxShadow: elevation > 0
             ? [
                 BoxShadow(
@@ -327,7 +346,8 @@ class GradientAppBar extends StatelessWidget implements PreferredSizeWidget {
   }
 }
 
-// Gradient Icon
+/// Gradient icon using shader mask
+/// Creates colorful icons for visual interest
 class GradientIcon extends StatelessWidget {
   final IconData icon;
   final double size;
@@ -357,11 +377,12 @@ class GradientIcon extends StatelessWidget {
       child: Icon(
         icon,
         size: size,
-        color: Colors.white,
+        color: Colors.white, // This color is replaced by gradient
       ),
     );
   }
 
+  /// Gets starting alignment for gradient
   AlignmentGeometry _getBeginAlignment() {
     switch (direction) {
       case GradientDirection.horizontal:
@@ -375,6 +396,7 @@ class GradientIcon extends StatelessWidget {
     }
   }
 
+  /// Gets ending alignment for gradient
   AlignmentGeometry _getEndAlignment() {
     switch (direction) {
       case GradientDirection.horizontal:
@@ -389,7 +411,8 @@ class GradientIcon extends StatelessWidget {
   }
 }
 
-// Gradient Text
+/// Gradient text using shader mask
+/// Creates eye-catching text for headers and titles
 class GradientText extends StatelessWidget {
   final String text;
   final TextStyle? style;
@@ -422,13 +445,14 @@ class GradientText extends StatelessWidget {
       child: Text(
         text,
         style: (style ?? theme.textTheme.bodyLarge)?.copyWith(
-          color: Colors.white,
+          color: Colors.white, // This color is replaced by gradient
         ),
         textAlign: textAlign,
       ),
     );
   }
 
+  /// Gets starting alignment for gradient
   AlignmentGeometry _getBeginAlignment() {
     switch (direction) {
       case GradientDirection.horizontal:
@@ -442,6 +466,7 @@ class GradientText extends StatelessWidget {
     }
   }
 
+  /// Gets ending alignment for gradient
   AlignmentGeometry _getEndAlignment() {
     switch (direction) {
       case GradientDirection.horizontal:
