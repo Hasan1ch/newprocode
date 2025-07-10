@@ -12,6 +12,8 @@ import 'package:procode/config/constants.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+/// Main settings screen providing access to all app configurations
+/// Organized into sections: Appearance, Notifications, Privacy, Account, and About
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -26,9 +28,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
+    // Load app version information
     _loadAppInfo();
   }
 
+  /// Retrieves app version and build number for display
   Future<void> _loadAppInfo() async {
     final packageInfo = await PackageInfo.fromPlatform();
     setState(() {
@@ -45,7 +49,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       backgroundColor: Theme.of(context).colorScheme.surface,
       body: CustomScrollView(
         slivers: [
-          // Custom App Bar
+          // Custom App Bar with gradient background
           SliverAppBar(
             expandedHeight: 120,
             pinned: true,
@@ -86,7 +90,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             padding: const EdgeInsets.all(16),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
-                // Appearance Section
+                // Appearance Section - theme settings
                 _SectionHeader('Appearance'),
                 Card(
                   child: Column(
@@ -151,11 +155,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Account Section
+                // Account Section - email, password, data management
                 _SectionHeader('Account'),
                 Card(
                   child: Column(
                     children: [
+                      // Email display and update
                       ListTile(
                         leading: const Icon(Icons.email_outlined),
                         title: const Text('Email'),
@@ -164,6 +169,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         onTap: () => _showUpdateEmailDialog(),
                       ),
                       const Divider(height: 1),
+                      // Password change
                       ListTile(
                         leading: const Icon(Icons.lock_outline),
                         title: const Text('Change Password'),
@@ -171,6 +177,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         onTap: () => _showChangePasswordDialog(),
                       ),
                       const Divider(height: 1),
+                      // Data export (placeholder functionality)
                       ListTile(
                         leading: const Icon(Icons.download_outlined),
                         title: const Text('Export Data'),
@@ -179,6 +186,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         onTap: () => _exportData(),
                       ),
                       const Divider(height: 1),
+                      // Account deletion - destructive action
                       ListTile(
                         leading: Icon(
                           Icons.delete_forever_outlined,
@@ -202,17 +210,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // About Section
+                // About Section - app info and legal links
                 _SectionHeader('About'),
                 Card(
                   child: Column(
                     children: [
+                      // App version
                       ListTile(
                         leading: const Icon(Icons.info_outline),
                         title: const Text('Version'),
                         subtitle: Text(_appVersion),
                       ),
                       const Divider(height: 1),
+                      // Terms of Service link
                       ListTile(
                         leading: const Icon(Icons.description_outlined),
                         title: const Text('Terms of Service'),
@@ -220,6 +230,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         onTap: () => _launchUrl(AppConstants.termsUrl),
                       ),
                       const Divider(height: 1),
+                      // Privacy Policy link
                       ListTile(
                         leading: const Icon(Icons.shield_outlined),
                         title: const Text('Privacy Policy'),
@@ -227,6 +238,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         onTap: () => _launchUrl(AppConstants.privacyUrl),
                       ),
                       const Divider(height: 1),
+                      // Help & Support link
                       ListTile(
                         leading: const Icon(Icons.help_outline),
                         title: const Text('Help & Support'),
@@ -264,6 +276,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  /// Shows theme selection dialog with radio options
   void _showThemeDialog(BuildContext context) {
     final themeProvider = context.read<ThemeProvider>();
 
@@ -291,6 +304,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  /// Returns human-readable theme name
   String _getThemeName(ThemeMode mode) {
     switch (mode) {
       case ThemeMode.light:
@@ -302,6 +316,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  /// Shows dialog for updating email with reauthentication
   void _showUpdateEmailDialog() {
     final emailController = TextEditingController();
     final passwordController = TextEditingController();
@@ -344,7 +359,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               if (email.isNotEmpty && password.isNotEmpty) {
                 try {
-                  // First re-authenticate the user
+                  // First re-authenticate the user for security
                   final user = FirebaseAuth.instance.currentUser;
                   if (user != null && user.email != null) {
                     final credential = EmailAuthProvider.credential(
@@ -354,7 +369,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                     await user.reauthenticateWithCredential(credential);
 
-                    // Use verifyBeforeUpdateEmail instead of deprecated updateEmail
+                    // Use verifyBeforeUpdateEmail for security
                     await user.verifyBeforeUpdateEmail(email);
 
                     if (mounted) {
@@ -385,6 +400,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  /// Shows dialog for changing password with validation
   void _showChangePasswordDialog() {
     final currentPasswordController = TextEditingController();
     final newPasswordController = TextEditingController();
@@ -429,6 +445,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           ElevatedButton(
             onPressed: () async {
+              // Validate passwords match
               if (newPasswordController.text !=
                   confirmPasswordController.text) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -438,6 +455,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               }
 
               try {
+                // Update password through auth service
                 await _authService.updatePassword(
                   currentPasswordController.text,
                   newPasswordController.text,
@@ -464,6 +482,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  /// Shows initial account deletion warning dialog
   void _showDeleteAccountDialog() {
     showDialog(
       context: context,
@@ -493,6 +512,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  /// Shows final confirmation dialog for account deletion
+  /// Requires typing "DELETE" and password for safety
   void _confirmDeleteAccount() {
     final confirmController = TextEditingController();
     final passwordController = TextEditingController();
@@ -535,11 +556,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           ElevatedButton(
             onPressed: () async {
+              // Verify confirmation text and password
               if (confirmController.text == 'DELETE' &&
                   passwordController.text.isNotEmpty) {
                 try {
+                  // Delete account through auth service
                   await _authService.deleteAccount(passwordController.text);
                   if (mounted) {
+                    // Navigate to auth screen and clear navigation stack
                     Navigator.pushNamedAndRemoveUntil(
                       context,
                       '/auth',
@@ -571,13 +595,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  /// Placeholder for future data export functionality
   Future<void> _exportData() async {
-    // Implement data export functionality
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Preparing your data export...')),
     );
   }
 
+  /// Opens external URLs in browser
   Future<void> _launchUrl(String url) async {
     final uri = Uri.parse(url);
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
@@ -589,6 +614,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  /// Shows logout confirmation and performs logout
   void _logout() async {
     showDialog(
       context: context,
@@ -602,8 +628,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           ElevatedButton(
             onPressed: () async {
+              // Sign out through auth provider
               await context.read<app_auth.AuthProvider>().signOut();
               if (mounted) {
+                // Navigate to auth screen and clear navigation stack
                 Navigator.pushNamedAndRemoveUntil(
                   context,
                   '/auth',
@@ -622,6 +650,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 }
 
+/// Section header widget for organizing settings groups
 class _SectionHeader extends StatelessWidget {
   final String title;
 
