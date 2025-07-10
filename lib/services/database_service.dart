@@ -12,6 +12,8 @@ import 'package:procode/models/module_model.dart';
 import 'package:procode/models/lesson_model.dart';
 import 'package:procode/config/firebase_config.dart';
 
+/// Main database service handling all Firestore operations
+/// This is the central point for all database interactions in the app
 class DatabaseService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -25,6 +27,8 @@ class DatabaseService {
   // User CRUD operations
 
   // Create new user
+  /// Creates a new user document in Firestore with all required fields
+  /// Also creates a corresponding user_stats document for tracking metrics
   Future<void> createUser(UserModel user) async {
     try {
       // Ensure user has privacy settings
@@ -66,6 +70,7 @@ class DatabaseService {
   }
 
   // Get user by ID
+  /// Retrieves a user document from Firestore by their unique ID
   Future<UserModel?> getUser(String uid) async {
     try {
       DocumentSnapshot doc = await _usersCollection.doc(uid).get();
@@ -81,6 +86,7 @@ class DatabaseService {
   }
 
   // Update user
+  /// Updates specific fields in a user document
   Future<void> updateUser(String uid, Map<String, dynamic> data) async {
     try {
       await _usersCollection.doc(uid).update(data);
@@ -92,6 +98,8 @@ class DatabaseService {
   }
 
   // Delete user
+  /// Deletes a user and all their associated data from the database
+  /// Also releases their username for future use
   Future<void> deleteUser(String uid) async {
     try {
       // Get username to release it
@@ -122,6 +130,8 @@ class DatabaseService {
   // Username operations
 
   // Check if username is available
+  /// Checks if a username is available (case-insensitive)
+  /// Returns true if available, false if taken
   Future<bool> checkUsernameAvailability(String username) async {
     try {
       username = username.trim().toLowerCase();
@@ -134,6 +144,7 @@ class DatabaseService {
   }
 
   // Reserve username
+  /// Reserves a username for a specific user to prevent duplicates
   Future<void> reserveUsername(String username, String uid) async {
     try {
       username = username.trim().toLowerCase();
@@ -149,6 +160,7 @@ class DatabaseService {
   }
 
   // Release username (when changing username or deleting account)
+  /// Releases a username back to the pool of available usernames
   Future<void> releaseUsername(String username) async {
     try {
       username = username.trim().toLowerCase();
@@ -161,6 +173,7 @@ class DatabaseService {
   }
 
   // Update username
+  /// Updates a user's username atomically, releasing the old one and reserving the new one
   Future<void> updateUsername(
       String uid, String oldUsername, String newUsername) async {
     try {
@@ -199,6 +212,7 @@ class DatabaseService {
   // Authentication related operations
 
   // Update last login date
+  /// Updates the last login date and triggers streak calculation
   Future<void> updateLastLoginDate(String uid) async {
     try {
       await _usersCollection.doc(uid).update({
@@ -215,6 +229,7 @@ class DatabaseService {
   }
 
   // Update email verification status
+  /// Updates whether a user has verified their email address
   Future<void> updateEmailVerificationStatus(
       String uid, bool isVerified) async {
     try {
@@ -231,6 +246,8 @@ class DatabaseService {
   // Gamification operations
 
   // Update user streak - FIXED VERSION
+  /// Calculates and updates the user's daily streak
+  /// Handles consecutive days, broken streaks, and first-time users
   Future<void> updateStreak(String uid) async {
     try {
       // Use a transaction to ensure atomic updates
@@ -324,6 +341,8 @@ class DatabaseService {
   }
 
   // FIXED addXP method to properly update both collections
+  /// Adds XP to a user and recalculates their level
+  /// Updates both users and user_stats collections for consistency
   Future<void> addXP(String uid, int xpToAdd) async {
     try {
       await _firestore.runTransaction((transaction) async {
@@ -399,6 +418,8 @@ class DatabaseService {
   // Progress tracking
 
   // Mark lesson as completed - FIXED to use addXP
+  /// Marks a lesson as completed and awards XP to the user
+  /// Updates both user document and stats collection
   Future<void> markLessonCompleted(
       String uid, String lessonId, int xpReward) async {
     try {
@@ -440,6 +461,8 @@ class DatabaseService {
   }
 
   // Mark quiz as completed - FIXED to use addXP
+  /// Records quiz completion and awards XP based on score
+  /// Tracks perfect quizzes separately for achievements
   Future<void> markQuizCompleted(
       String uid, String quizId, int score, int xpReward) async {
     try {
@@ -491,6 +514,7 @@ class DatabaseService {
   // Achievement operations
 
   // Grant achievement to user
+  /// Grants an achievement to a user by adding it to their achievement list
   Future<void> grantAchievement(String uid, String achievementId) async {
     try {
       await _usersCollection.doc(uid).update({
@@ -505,6 +529,7 @@ class DatabaseService {
   }
 
   // Get user stats (returns Map for backward compatibility)
+  /// Retrieves user statistics as a raw map
   Future<Map<String, dynamic>?> getUserStatsMap(String uid) async {
     try {
       DocumentSnapshot doc = await _userStatsCollection.doc(uid).get();
@@ -520,6 +545,7 @@ class DatabaseService {
   }
 
   // Search users by username (for social features)
+  /// Searches for users whose username starts with the query string
   Future<List<UserModel>> searchUsersByUsername(String query) async {
     try {
       query = query.trim().toLowerCase();
@@ -541,6 +567,8 @@ class DatabaseService {
   // ============= UPDATED LEADERBOARD METHODS WITH REAL DATA =============
 
   // Get global leaderboard with real user data
+  /// Fetches the global leaderboard sorted by total XP
+  /// Respects user privacy settings and filters accordingly
   Future<List<LeaderboardEntry>> getGlobalLeaderboard(
       {required int limit}) async {
     try {
@@ -606,6 +634,8 @@ class DatabaseService {
   }
 
   // Get weekly leaderboard with calculated weekly XP
+  /// Calculates weekly leaderboard based on XP earned in the last 7 days
+  /// Uses dailyXP tracking from user_stats collection
   Future<List<LeaderboardEntry>> getWeeklyLeaderboard(
       {required int limit}) async {
     try {
@@ -693,6 +723,7 @@ class DatabaseService {
   }
 
   // Get monthly leaderboard with calculated monthly XP
+  /// Calculates monthly leaderboard based on XP earned in the last 30 days
   Future<List<LeaderboardEntry>> getMonthlyLeaderboard(
       {required int limit}) async {
     try {
@@ -780,6 +811,7 @@ class DatabaseService {
   }
 
   // Get course leaderboard - unchanged but with privacy check
+  /// Gets leaderboard for a specific course based on XP earned in that course
   Future<List<LeaderboardEntry>> getCourseLeaderboard({
     required String courseId,
     required int limit,
@@ -844,6 +876,7 @@ class DatabaseService {
   }
 
   // Get user global rank with privacy check
+  /// Calculates a user's global rank considering privacy settings
   Future<int?> getUserGlobalRank(String userId) async {
     try {
       final userDoc = await _usersCollection.doc(userId).get();
@@ -877,6 +910,7 @@ class DatabaseService {
   }
 
   // Get user weekly rank
+  /// Calculates user's rank based on weekly XP
   Future<int?> getUserWeeklyRank(String userId) async {
     try {
       final weekAgo = DateTime.now().subtract(const Duration(days: 7));
@@ -908,6 +942,7 @@ class DatabaseService {
   }
 
   // Get user monthly rank
+  /// Calculates user's rank based on monthly XP
   Future<int?> getUserMonthlyRank(String userId) async {
     try {
       final monthAgo = DateTime.now().subtract(const Duration(days: 30));
@@ -939,6 +974,7 @@ class DatabaseService {
   }
 
   // Get user course rank
+  /// Calculates user's rank within a specific course
   Future<int?> getUserCourseRank({
     required String userId,
     required String courseId,
@@ -970,6 +1006,7 @@ class DatabaseService {
   }
 
   // Get leaderboard entry for a specific user
+  /// Creates a complete leaderboard entry for a user with all calculated stats
   Future<LeaderboardEntry?> getLeaderboardEntry(String userId) async {
     try {
       final userDoc = await _usersCollection.doc(userId).get();
@@ -1028,6 +1065,8 @@ class DatabaseService {
   }
 
   // Migration method to ensure all users have privacy settings
+  /// Adds default privacy settings to users who don't have them
+  /// Used for database migration when adding new features
   Future<void> migrateUserPrivacySettings() async {
     try {
       final batch = _firestore.batch();
@@ -1070,6 +1109,7 @@ class DatabaseService {
   // ============= QUIZ METHODS =============
 
   // Get quizzes by category
+  /// Fetches all quizzes in a specific category, ordered by difficulty
   Future<List<QuizModel>> getQuizzesByCategory(String category) async {
     try {
       final snapshot = await _firestore
@@ -1091,6 +1131,7 @@ class DatabaseService {
   }
 
   // Get module quizzes
+  /// Fetches quizzes associated with a specific module in a course
   Future<List<QuizModel>> getModuleQuizzes(
       String courseId, String moduleId) async {
     try {
@@ -1113,6 +1154,7 @@ class DatabaseService {
   }
 
   // Get quiz by ID
+  /// Retrieves a specific quiz by its ID
   Future<QuizModel?> getQuizById(String quizId) async {
     try {
       final doc = await _firestore.collection('quizzes').doc(quizId).get();
@@ -1130,6 +1172,7 @@ class DatabaseService {
   }
 
   // Get quiz questions
+  /// Fetches all questions for a quiz, ordered by their index
   Future<List<QuestionModel>> getQuizQuestions(String quizId) async {
     try {
       final snapshot = await _firestore
@@ -1152,6 +1195,7 @@ class DatabaseService {
   }
 
   // Save quiz result
+  /// Saves a user's quiz attempt result to the database
   Future<void> saveQuizResult(QuizResultModel result) async {
     try {
       await _firestore
@@ -1167,6 +1211,7 @@ class DatabaseService {
   }
 
   // Get user quiz history
+  /// Retrieves all quiz attempts by a user, ordered by most recent
   Future<List<QuizResultModel>> getUserQuizHistory(String userId) async {
     try {
       final snapshot = await _firestore
@@ -1188,6 +1233,7 @@ class DatabaseService {
   }
 
   // Check if user has completed quiz
+  /// Checks if a user has attempted a specific quiz before
   Future<bool> hasUserCompletedQuiz(String userId, String quizId) async {
     try {
       final snapshot = await _firestore
@@ -1205,6 +1251,7 @@ class DatabaseService {
   }
 
   // Get user's best score
+  /// Gets the highest score a user has achieved on a specific quiz
   Future<int?> getUserBestScore(String userId, String quizId) async {
     try {
       final snapshot = await _firestore
@@ -1227,6 +1274,7 @@ class DatabaseService {
   // ============= USER STATS METHODS =============
 
   // Create user stats
+  /// Creates a new user stats document
   Future<void> createUserStats(UserStats stats) async {
     try {
       await _userStatsCollection.doc(stats.uid).set(stats.toJson());
@@ -1238,6 +1286,7 @@ class DatabaseService {
   }
 
   // Get user stats as UserStats model
+  /// Retrieves user statistics as a strongly-typed model
   Future<UserStats?> getUserStats(String uid) async {
     try {
       DocumentSnapshot doc = await _userStatsCollection.doc(uid).get();
@@ -1258,6 +1307,7 @@ class DatabaseService {
   // ============= GAMIFICATION SERVICE HELPER =============
 
   // Award XP to user
+  /// Helper method that wraps addXP for gamification service
   Future<void> awardXP(String userId, int xpAmount) async {
     try {
       await addXP(userId, xpAmount);
@@ -1270,6 +1320,7 @@ class DatabaseService {
   // ============= COURSE METHODS =============
 
   // Get all courses
+  /// Fetches all available courses, ordered by creation date
   Future<List<CourseModel>> getAllCourses() async {
     try {
       final snapshot = await _firestore
@@ -1290,6 +1341,7 @@ class DatabaseService {
   }
 
   // Get courses by language
+  /// Fetches courses filtered by programming language
   Future<List<CourseModel>> getCoursesByLanguage(String language) async {
     try {
       final snapshot = await _firestore
@@ -1311,6 +1363,7 @@ class DatabaseService {
   }
 
   // Get featured courses
+  /// Fetches courses marked as featured for homepage display
   Future<List<CourseModel>> getFeaturedCourses() async {
     try {
       final snapshot = await _firestore
@@ -1332,6 +1385,7 @@ class DatabaseService {
   }
 
   // Get course by ID
+  /// Retrieves a specific course by its ID
   Future<CourseModel?> getCourseById(String courseId) async {
     try {
       final doc = await _firestore.collection('courses').doc(courseId).get();
@@ -1349,6 +1403,7 @@ class DatabaseService {
   }
 
   // Get course modules
+  /// Fetches all modules for a course, ordered by their index
   Future<List<ModuleModel>> getCourseModules(String courseId) async {
     try {
       final snapshot = await _firestore
@@ -1370,6 +1425,7 @@ class DatabaseService {
   }
 
   // Get module lessons
+  /// Fetches all lessons in a module, ordered by their index
   Future<List<LessonModel>> getModuleLessons(String moduleId) async {
     try {
       final snapshot = await _firestore
@@ -1391,6 +1447,7 @@ class DatabaseService {
   }
 
   // Get lesson by ID
+  /// Retrieves a specific lesson by its ID
   Future<LessonModel?> getLessonById(String lessonId) async {
     try {
       final doc = await _firestore.collection('lessons').doc(lessonId).get();
@@ -1410,6 +1467,7 @@ class DatabaseService {
   // ============= PROGRESS TRACKING METHODS =============
 
   // Create or update course progress
+  /// Creates new progress or updates existing progress for a user in a course
   Future<void> createOrUpdateProgress({
     required String userId,
     required String courseId,
@@ -1455,6 +1513,7 @@ class DatabaseService {
   }
 
   // Get user's progress for a specific course
+  /// Retrieves progress data for a user in a specific course
   Future<Map<String, dynamic>?> getUserCourseProgress({
     required String userId,
     required String courseId,
@@ -1482,6 +1541,7 @@ class DatabaseService {
   }
 
   // Get all progress for a user
+  /// Retrieves all course progress records for a user
   Future<List<Map<String, dynamic>>> getUserAllProgress({
     required String userId,
   }) async {
@@ -1504,6 +1564,7 @@ class DatabaseService {
   }
 
   // Delete user's progress for a course
+  /// Removes all progress data for a user in a specific course
   Future<void> deleteUserCourseProgress({
     required String userId,
     required String courseId,
@@ -1531,6 +1592,7 @@ class DatabaseService {
   }
 
   // Fix progress completion percentage
+  /// Recalculates course completion percentage based on completed lessons
   Future<void> recalculateProgressPercentage({
     required String userId,
     required String courseId,
@@ -1586,6 +1648,7 @@ class DatabaseService {
   }
 
   // Ensure all progress documents have userId
+  /// Validates that all progress documents have required userId field
   Future<void> validateAllProgressDocuments() async {
     try {
       final progressSnapshot = await _firestore.collection('progress').get();
@@ -1612,6 +1675,8 @@ class DatabaseService {
   }
 
   // SYNC XP DATA - Helper method to fix inconsistencies
+  /// Syncs XP data between users and user_stats collections
+  /// user_stats is considered the source of truth
   Future<void> syncUserXP(String uid) async {
     try {
       await _firestore.runTransaction((transaction) async {
