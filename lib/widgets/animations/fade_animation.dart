@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 
+/// Simple fade-in animation widget for smooth content appearance
+/// Used throughout the app to make UI elements appear gracefully
+/// Supports delayed animations for staggered effects
 class FadeAnimation extends StatefulWidget {
   final Widget child;
-  final double delay;
-  final Duration duration;
-  final Curve curve;
+  final double delay; // Delay in seconds before animation starts
+  final Duration duration; // How long the fade takes
+  final Curve curve; // Animation easing curve
 
   const FadeAnimation({
     Key? key,
@@ -26,26 +29,32 @@ class _FadeAnimationState extends State<FadeAnimation>
   @override
   void initState() {
     super.initState();
+
+    // Initialize animation controller
     _controller = AnimationController(
       duration: widget.duration,
       vsync: this,
     );
 
+    // Create opacity animation from 0 to 1
     _animation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
+      begin: 0.0, // Fully transparent
+      end: 1.0, // Fully opaque
     ).animate(CurvedAnimation(
       parent: _controller,
       curve: widget.curve,
     ));
 
+    // Handle delayed start if specified
     if (widget.delay > 0) {
       Future.delayed(Duration(milliseconds: (widget.delay * 1000).round()), () {
+        // Check if widget is still mounted before starting
         if (mounted) {
           _controller.forward();
         }
       });
     } else {
+      // Start immediately if no delay
       _controller.forward();
     }
   }
@@ -65,19 +74,22 @@ class _FadeAnimationState extends State<FadeAnimation>
   }
 }
 
+/// Creates staggered fade animations for multiple widgets
+/// Perfect for lists and grids where items should appear sequentially
+/// Creates a cascading effect that guides the user's eye
 class StaggeredFadeAnimation extends StatefulWidget {
   final List<Widget> children;
-  final double delayIncrement;
+  final double delayIncrement; // Delay between each child
   final Duration duration;
   final Curve curve;
-  final Axis direction;
+  final Axis direction; // Layout direction (vertical/horizontal)
   final MainAxisAlignment mainAxisAlignment;
   final CrossAxisAlignment crossAxisAlignment;
 
   const StaggeredFadeAnimation({
     Key? key,
     required this.children,
-    this.delayIncrement = 0.1,
+    this.delayIncrement = 0.1, // 100ms between each item
     this.duration = const Duration(milliseconds: 500),
     this.curve = Curves.easeOut,
     this.direction = Axis.vertical,
@@ -92,15 +104,17 @@ class StaggeredFadeAnimation extends StatefulWidget {
 class _StaggeredFadeAnimationState extends State<StaggeredFadeAnimation> {
   @override
   Widget build(BuildContext context) {
+    // Wrap each child with FadeAnimation, increasing delay for each
     final animatedChildren = widget.children.asMap().entries.map((entry) {
       return FadeAnimation(
-        delay: entry.key * widget.delayIncrement,
+        delay: entry.key * widget.delayIncrement, // Stagger based on index
         duration: widget.duration,
         curve: widget.curve,
         child: entry.value,
       );
     }).toList();
 
+    // Return appropriate layout based on direction
     if (widget.direction == Axis.vertical) {
       return Column(
         mainAxisAlignment: widget.mainAxisAlignment,
@@ -117,11 +131,14 @@ class _StaggeredFadeAnimationState extends State<StaggeredFadeAnimation> {
   }
 }
 
+/// Continuous pulsing fade animation for attention-grabbing elements
+/// Used for CTAs, notifications, or important UI elements
+/// Creates a breathing effect that draws user attention
 class PulseFadeAnimation extends StatefulWidget {
   final Widget child;
   final Duration duration;
-  final double minOpacity;
-  final double maxOpacity;
+  final double minOpacity; // Lowest opacity in pulse
+  final double maxOpacity; // Highest opacity in pulse
 
   const PulseFadeAnimation({
     Key? key,
@@ -143,19 +160,23 @@ class _PulseFadeAnimationState extends State<PulseFadeAnimation>
   @override
   void initState() {
     super.initState();
+
+    // Create repeating animation controller
     _controller = AnimationController(
       duration: widget.duration,
       vsync: this,
     );
 
+    // Animate between min and max opacity
     _animation = Tween<double>(
       begin: widget.minOpacity,
       end: widget.maxOpacity,
     ).animate(CurvedAnimation(
       parent: _controller,
-      curve: Curves.easeInOut,
+      curve: Curves.easeInOut, // Smooth breathing effect
     ));
 
+    // Repeat forever with reverse (fade in and out)
     _controller.repeat(reverse: true);
   }
 
