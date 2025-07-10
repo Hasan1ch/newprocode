@@ -15,6 +15,8 @@ import 'package:procode/config/app_colors.dart';
 import 'package:procode/models/achievement_model.dart';
 import 'package:fl_chart/fl_chart.dart';
 
+/// Main profile screen showing user information, stats, and achievements
+/// Includes activity tracking chart and quick action buttons
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -29,6 +31,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _loadUserData();
   }
 
+  /// Loads user data when screen initializes
   Future<void> _loadUserData() async {
     final authProvider = context.read<AuthProvider>();
     final userProvider = context.read<UserProvider>();
@@ -44,10 +47,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       backgroundColor: Theme.of(context).colorScheme.surface,
       body: Consumer<UserProvider>(
         builder: (context, userProvider, _) {
+          // Handle loading state
           if (userProvider.isLoading) {
             return const LoadingWidget();
           }
 
+          // Handle error state
           if (userProvider.error != null) {
             return CustomErrorWidget(
               message: userProvider.error!,
@@ -66,7 +71,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onRefresh: () => userProvider.refresh(),
             child: CustomScrollView(
               slivers: [
-                // Custom App Bar with Cover
+                // Expandable app bar with profile header
                 SliverAppBar(
                   expandedHeight: 200,
                   pinned: true,
@@ -77,7 +82,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            // Avatar
+                            // Avatar with hero animation
                             Hero(
                               tag: 'profile_avatar',
                               child: CircleAvatar(
@@ -101,7 +106,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                             ),
                             const SizedBox(height: 12),
-                            // Name and Username
+                            // User name
                             Text(
                               user.displayName,
                               style: const TextStyle(
@@ -110,6 +115,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 color: Colors.white,
                               ),
                             ),
+                            // Username
                             Text(
                               '@${user.username}',
                               style: TextStyle(
@@ -123,7 +129,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                   actions: [
-                    // Settings Button - NEW ADDITION
+                    // Settings button
                     IconButton(
                       icon: const Icon(Icons.settings_outlined),
                       tooltip: 'Settings',
@@ -136,7 +142,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         );
                       },
                     ),
-                    // Leaderboard Button
+                    // Leaderboard button
                     IconButton(
                       icon: const Icon(Icons.leaderboard_outlined),
                       tooltip: 'Leaderboard',
@@ -149,7 +155,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         );
                       },
                     ),
-                    // Edit Profile Button
+                    // Edit profile button
                     IconButton(
                       icon: const Icon(Icons.edit_outlined),
                       tooltip: 'Edit Profile',
@@ -165,12 +171,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ],
                 ),
 
-                // Profile Content
+                // Profile content
                 SliverPadding(
                   padding: const EdgeInsets.all(16),
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
-                      // Bio Section
+                      // Bio section if available
                       if (user.bio != null && user.bio!.isNotEmpty) ...[
                         Card(
                           child: Padding(
@@ -188,6 +194,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   user.bio!,
                                   style: Theme.of(context).textTheme.bodyMedium,
                                 ),
+                                // Country if available
                                 if (user.country != null) ...[
                                   const SizedBox(height: 8),
                                   Row(
@@ -218,14 +225,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         const SizedBox(height: 16),
                       ],
 
-                      // Stats Grid
+                      // Statistics grid
                       const StatsGrid(),
                       const SizedBox(height: 16),
 
-                      // Quick Actions Section - NEW ADDITION
+                      // Quick actions section
                       Row(
                         children: [
-                          // Settings Card
+                          // Settings quick action
                           Expanded(
                             child: Card(
                               child: Material(
@@ -273,7 +280,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          // Leaderboard Card
+                          // Leaderboard quick action
                           Expanded(
                             child: Card(
                               child: Material(
@@ -325,7 +332,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Featured Achievements
+                      // Featured achievements section
                       Card(
                         child: Padding(
                           padding: const EdgeInsets.all(16),
@@ -356,6 +363,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ],
                               ),
                               const SizedBox(height: 12),
+                              // Empty state or achievement badges
                               if (user.featuredAchievements.isEmpty)
                                 Center(
                                   child: Padding(
@@ -415,7 +423,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Activity Chart
+                      // Activity chart
                       Card(
                         child: Padding(
                           padding: const EdgeInsets.all(16),
@@ -446,11 +454,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  /// Builds activity chart showing XP earned over last 30 days
   Widget _buildActivityChart(Map<DateTime, int> activityData) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    // Generate data for last 30 days
+    // Generate data points for last 30 days
     final now = DateTime.now();
     final spots = <FlSpot>[];
 
@@ -463,6 +472,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return LineChart(
       LineChartData(
+        // Grid configuration
         gridData: FlGridData(
           show: true,
           drawVerticalLine: false,
@@ -474,12 +484,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             );
           },
         ),
+        // Axis titles configuration
         titlesData: FlTitlesData(
           show: true,
           rightTitles:
               const AxisTitles(sideTitles: SideTitles(showTitles: false)),
           topTitles:
               const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          // Bottom axis shows dates
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
@@ -504,6 +516,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               },
             ),
           ),
+          // Left axis shows XP values
           leftTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
@@ -527,6 +540,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         minY: 0,
         maxY:
             spots.map((s) => s.y).fold<double>(0, (a, b) => a > b ? a : b) + 20,
+        // Line configuration
         lineBarsData: [
           LineChartBarData(
             spots: spots,
@@ -540,6 +554,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             barWidth: 3,
             isStrokeCapRound: true,
             dotData: const FlDotData(show: false),
+            // Area under the line
             belowBarData: BarAreaData(
               show: true,
               gradient: LinearGradient(
