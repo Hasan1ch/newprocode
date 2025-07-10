@@ -8,6 +8,8 @@ import 'package:procode/utils/validators.dart';
 import 'package:procode/config/routes.dart';
 import 'package:procode/config/app_colors.dart';
 
+/// Password reset screen with email verification
+/// Handles sending password reset emails and provides user feedback
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({Key? key}) : super(key: key);
 
@@ -20,9 +22,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
 
+  // State tracking
   bool _isEmailSent = false;
   bool _isLoading = false;
 
+  // Animation controllers
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
@@ -33,6 +37,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
     _initializeAnimations();
   }
 
+  /// Initialize fade and slide animations for smooth UI transitions
   void _initializeAnimations() {
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 800),
@@ -62,6 +67,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
     super.dispose();
   }
 
+  /// Handle password reset request
+  /// Validates email and sends reset instructions
   Future<void> _handlePasswordReset() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -78,6 +85,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
     });
 
     if (success) {
+      // Show success view
       setState(() {
         _isEmailSent = true;
       });
@@ -86,6 +94,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
     }
   }
 
+  /// Display error message to user
   void _showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -119,6 +128,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                 opacity: _fadeAnimation,
                 child: SlideTransition(
                   position: _slideAnimation,
+                  // Switch between reset form and success view
                   child: _isEmailSent ? _buildSuccessView() : _buildResetForm(),
                 ),
               ),
@@ -129,6 +139,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
     );
   }
 
+  /// Build password reset form
   Widget _buildResetForm() {
     return Form(
       key: _formKey,
@@ -224,6 +235,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
     );
   }
 
+  /// Build success view after email is sent
   Widget _buildSuccessView() {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -267,7 +279,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
 
         const SizedBox(height: 8),
 
-        // Email
+        // Email address display
         Text(
           _emailController.text.trim(),
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
@@ -278,7 +290,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
 
         const SizedBox(height: 32),
 
-        // Instructions
+        // Instructions box
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -333,7 +345,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
 
         const SizedBox(height: 48),
 
-        // Tips
+        // Tips for troubleshooting
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
