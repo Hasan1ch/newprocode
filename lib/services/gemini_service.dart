@@ -5,13 +5,20 @@ import 'package:procode/models/question_model.dart';
 import 'package:procode/models/quiz_result_model.dart';
 import 'package:procode/utils/app_logger.dart';
 
+/// Gemini AI Service - Powers all AI features in ProCode
+/// This service integrates Google's Gemini API for:
+/// - AI Learning Advisor (personalized guidance)
+/// - Code explanation and debugging help
+/// - Course recommendations
+/// - Learning path generation
 class GeminiService {
-  // Get API key from environment
+  // API configuration - key stored securely in environment variables
   static String get _apiKey => dotenv.env['GEMINI_API_KEY'] ?? '';
   static const String _baseUrl =
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
 
-  // Test API connection
+  /// Tests API connectivity on app startup
+  /// Ensures AI features are available before users try to access them
   Future<bool> testConnection() async {
     try {
       final url = Uri.parse('$_baseUrl?key=$_apiKey');
@@ -19,6 +26,7 @@ class GeminiService {
       AppLogger.info('Testing Gemini API connection...');
       AppLogger.info('API Key present: ${_apiKey.isNotEmpty}');
 
+      // Simple test request with minimal token usage
       final response = await http
           .post(
             url,
@@ -32,7 +40,7 @@ class GeminiService {
                 }
               ],
               'generationConfig': {
-                'temperature': 0.1,
+                'temperature': 0.1, // Low temperature for consistent test
                 'maxOutputTokens': 50,
               }
             }),
@@ -54,12 +62,14 @@ class GeminiService {
     }
   }
 
-  // Chat-based conversation method
+  /// Generic chat interface for AI conversations
+  /// Used by the AI Advisor feature for open-ended learning discussions
   Future<String> getChatResponse({
     required String message,
     required String systemPrompt,
   }) async {
     try {
+      // Fail gracefully if API is not configured
       if (_apiKey.isEmpty) {
         return 'AI service is not configured. Please check your API key.';
       }
@@ -70,16 +80,18 @@ class GeminiService {
         'contents': [
           {
             'parts': [
+              // Combine system prompt with user message for context
               {'text': '$systemPrompt\n\nUser message: $message'}
             ]
           }
         ],
         'generationConfig': {
-          'temperature': 0.8,
-          'topK': 40,
-          'topP': 0.95,
-          'maxOutputTokens': 1024,
+          'temperature': 0.8, // Higher temp for more creative responses
+          'topK': 40, // Consider top 40 tokens
+          'topP': 0.95, // Nucleus sampling for quality
+          'maxOutputTokens': 1024, // Sufficient for detailed responses
         },
+        // Safety settings prevent inappropriate content
         'safetySettings': [
           {
             'category': 'HARM_CATEGORY_HARASSMENT',
@@ -110,10 +122,12 @@ class GeminiService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        // Extract text from Gemini's response structure
         if (data['candidates'] != null && data['candidates'].isNotEmpty) {
           final text = data['candidates'][0]['content']['parts'][0]['text'];
           return text.trim();
         } else {
+          // Use fallback if no valid response
           return _getChatFallbackResponse(message);
         }
       } else {
@@ -126,6 +140,8 @@ class GeminiService {
     }
   }
 
+  /// Provides helpful fallback responses when AI is unavailable
+  /// Ensures users always get some guidance even if API fails
   String _getChatFallbackResponse(String message) {
     return '''I understand you're interested in learning programming! While I'm having trouble connecting to my full capabilities right now, I can still help guide you.
 
@@ -134,7 +150,8 @@ Based on what you've shared, I recommend starting with fundamental programming c
 What specific area of programming interests you most?''';
   }
 
-  // Main method for AI conversations
+  /// Main AI Advisor method - provides personalized learning guidance
+  /// This is the brain behind our AI Learning Advisor feature
   Future<String> getAIAdvice({
     required String message,
     required String userId,
@@ -147,6 +164,7 @@ What specific area of programming interests you most?''';
 
       final url = Uri.parse('$_baseUrl?key=$_apiKey');
 
+      // Carefully crafted prompt to ensure helpful, educational responses
       final prompt = '''
 You are an AI Learning Advisor for ProCode, a gamified programming learning platform. 
 You help users with course recommendations, programming concepts, career guidance, and learning strategies.
@@ -171,7 +189,7 @@ Please provide a helpful, encouraging response that:
           }
         ],
         'generationConfig': {
-          'temperature': 0.7,
+          'temperature': 0.7, // Balanced between creative and focused
           'topK': 40,
           'topP': 0.95,
           'maxOutputTokens': 1024,
@@ -225,7 +243,8 @@ Please provide a helpful, encouraging response that:
     }
   }
 
-  // AI Assistant for Code Editor - FIXED IMPLEMENTATION
+  /// AI-powered code assistant for the code editor
+  /// Helps users understand code, debug issues, and learn best practices
   Future<String> getAIResponse({
     required String code,
     required String question,
@@ -238,6 +257,7 @@ Please provide a helpful, encouraging response that:
 
       final url = Uri.parse('$_baseUrl?key=$_apiKey');
 
+      // Context-aware prompt that considers the code and language
       final prompt = '''
 You are an AI coding assistant helping with $language programming.
 
@@ -300,7 +320,8 @@ Keep your response concise but complete.
     }
   }
 
-  // Generate course recommendations with AI
+  /// Generates personalized course recommendations based on user goals
+  /// Uses AI to match user interests with available courses
   Future<Map<String, dynamic>> generateCourseRecommendations({
     required String userGoal,
     required String skillLevel,
@@ -313,6 +334,7 @@ Keep your response concise but complete.
 
       final url = Uri.parse('$_baseUrl?key=$_apiKey');
 
+      // Structured prompt ensures consistent, parseable responses
       final prompt = '''
 You are an AI course advisor for ProCode, a programming learning platform.
 
@@ -371,7 +393,8 @@ Provide 3-5 course recommendations that progressively build skills toward the us
     }
   }
 
-  // Helper method to parse AI recommendation response
+  /// Parses AI response into structured course recommendations
+  /// Handles various response formats and ensures consistent output
   Map<String, dynamic> _parseRecommendationResponse(
       String aiResponse, String userGoal) {
     try {
@@ -381,6 +404,7 @@ Provide 3-5 course recommendations that progressively build skills toward the us
       bool inReasoning = false;
       bool inCourses = false;
 
+      // Parse the structured response line by line
       for (String line in lines) {
         if (line.contains('REASONING:')) {
           inReasoning = true;
@@ -389,9 +413,10 @@ Provide 3-5 course recommendations that progressively build skills toward the us
           inReasoning = false;
           inCourses = true;
         } else if (inCourses && line.trim().isNotEmpty) {
-          // Parse course line with pipe separator
+          // Parse course line with pipe separator format
           final parts = line.split('|').map((p) => p.trim()).toList();
           if (parts.length >= 3) {
+            // Extract course number from format like "1. Course Title"
             final titleMatch = RegExp(r'^\d+\.\s*(.+)').firstMatch(parts[0]);
             final title = titleMatch?.group(1) ?? parts[0];
 
@@ -404,10 +429,11 @@ Provide 3-5 course recommendations that progressively build skills toward the us
               'duration': parts.length > 3
                   ? parts[3].replaceAll('Duration:', '').trim()
                   : '4 weeks',
-              'icon': _getCourseIcon(title),
+              'icon': _getCourseIcon(title), // Auto-assign relevant icon
             });
           }
         } else if (inReasoning && line.trim().isNotEmpty) {
+          // Concatenate multi-line reasoning
           reasoning += ' ' + line.trim();
         }
       }
@@ -422,11 +448,13 @@ Provide 3-5 course recommendations that progressively build skills toward the us
         'courses': courses,
       };
     } catch (e) {
+      // Fallback to defaults on any parsing error
       return _getDefaultRecommendations(userGoal);
     }
   }
 
-  // Get course icon based on title
+  /// Assigns appropriate icons based on course title keywords
+  /// Makes the UI more visually appealing and easier to scan
   String _getCourseIcon(String title) {
     final lower = title.toLowerCase();
     if (lower.contains('web') || lower.contains('html')) return '🌐';
@@ -442,13 +470,15 @@ Provide 3-5 course recommendations that progressively build skills toward the us
     if (lower.contains('game')) return '🎮';
     if (lower.contains('backend')) return '🖥️';
     if (lower.contains('frontend')) return '🎨';
-    return '💻';
+    return '💻'; // Default computer icon
   }
 
-  // Fallback response for code assistant
+  /// Intelligent fallback for code assistance when AI is unavailable
+  /// Provides context-aware help based on common programming needs
   String _getCodeAssistantFallback(String question, String language) {
     final questionLower = question.toLowerCase();
 
+    // Provide targeted responses based on question type
     if (questionLower.contains('explain')) {
       return '''I'll explain your $language code:
 
@@ -491,6 +521,7 @@ Which aspect would you like to focus on?''';
 
 Remember: Practice makes perfect! Keep trying different approaches.''';
     } else {
+      // Generic helpful response
       return '''I'm here to help with your $language code! I can:
 
 • **Explain** how your code works
@@ -503,10 +534,12 @@ What would you like to know about your code?''';
     }
   }
 
-  // Fallback response for when API fails
+  /// General fallback for AI advisor when API is unavailable
+  /// Maintains helpful tone and guides users to next steps
   String _getFallbackResponse(String message) {
     final lower = message.toLowerCase();
 
+    // Context-aware responses based on common queries
     if (lower.contains('course') || lower.contains('recommend')) {
       return '''I'd be happy to recommend courses for you! To give you the best recommendations, could you tell me more about:
 
@@ -547,12 +580,14 @@ What specific aspect would you like to explore?''';
     }
   }
 
-  // Default recommendations when AI fails
+  /// Provides curated course recommendations when AI is unavailable
+  /// Based on common learning paths and proven progression
   Map<String, dynamic> _getDefaultRecommendations(String userGoal) {
     final goal = userGoal.toLowerCase();
     List<Map<String, dynamic>> courses = [];
     String reasoning = '';
 
+    // Game development path - highly requested by students
     if (goal.contains('game') || goal.contains('dev')) {
       reasoning =
           '''For game development, you'll need a strong foundation in programming fundamentals, followed by game-specific concepts like graphics, physics, and game engines. I've selected courses that will progressively build your skills from beginner to professional game developer.''';
@@ -586,7 +621,9 @@ What specific aspect would you like to explore?''';
           'icon': '🚀',
         },
       ];
-    } else if (goal.contains('full stack') ||
+    }
+    // Full-stack development path - most popular career choice
+    else if (goal.contains('full stack') ||
         goal.contains('fullstack') ||
         goal.contains('web')) {
       reasoning =
@@ -628,7 +665,9 @@ What specific aspect would you like to explore?''';
           'icon': '🚀',
         },
       ];
-    } else if (goal.contains('mobile')) {
+    }
+    // Mobile development path - growing field
+    else if (goal.contains('mobile')) {
       reasoning =
           '''Mobile development is an excellent choice! I've created a path that starts with programming basics and leads to building professional mobile applications for both iOS and Android.''';
       courses = [
@@ -661,7 +700,9 @@ What specific aspect would you like to explore?''';
           'icon': '🏗️',
         },
       ];
-    } else {
+    }
+    // General programming path - good for beginners
+    else {
       reasoning =
           '''Based on your interests, I've selected courses that will give you a strong foundation in programming and prepare you for various career paths in software development.''';
       courses = [
@@ -702,7 +743,9 @@ What specific aspect would you like to explore?''';
     };
   }
 
-  // Other methods remain the same...
+  /// Simple methods for quiz-related AI features
+  /// These provide basic functionality when full AI is not needed
+
   Future<String> explainWrongAnswer({
     required QuestionModel question,
     required String userAnswer,
@@ -716,6 +759,7 @@ What specific aspect would you like to explore?''';
     required Map<int, String> userAnswers,
   }) async {
     final percentage = quizResult.percentage;
+    // Encouraging feedback based on performance
     if (percentage >= 90) {
       return 'Excellent work! You demonstrated a strong understanding of the material.';
     } else if (percentage >= 70) {
@@ -730,6 +774,7 @@ What specific aspect would you like to explore?''';
     required List<QuestionModel> wrongQuestions,
     required String courseName,
   }) async {
+    // Generic recommendations that apply to most learning situations
     return [
       'Review the lesson materials for better understanding',
       'Practice more problems similar to the ones you missed',
@@ -738,6 +783,7 @@ What specific aspect would you like to explore?''';
   }
 
   Future<String> generateMotivationalMessage(int scorePercentage) async {
+    // Motivational messages to keep users engaged
     if (scorePercentage >= 90) {
       return '🌟 Outstanding performance! You\'re mastering this material!';
     } else if (scorePercentage >= 70) {
@@ -755,6 +801,7 @@ What specific aspect would you like to explore?''';
     required QuestionModel question,
     required int hintsRequested,
   }) async {
+    // Progressive hints that don't give away the answer
     return [
       'Think about the problem step by step',
       'Consider what the question is really asking',
@@ -762,7 +809,8 @@ What specific aspect would you like to explore?''';
     ].take(hintsRequested).toList();
   }
 
-  // Generate learning path with AI
+  /// Generates a complete personalized learning path
+  /// This is our most advanced AI feature - creates multi-week curriculum
   Future<LearningPath> generateLearningPath({
     required String userId,
     required String skillLevel,
@@ -772,6 +820,7 @@ What specific aspect would you like to explore?''';
     required int weeklyHours,
   }) async {
     try {
+      // For now, return default path - full AI implementation pending
       return _getDefaultLearningPath(
           userId, skillLevel, learningGoal, weeklyHours);
     } catch (e) {
@@ -781,7 +830,8 @@ What specific aspect would you like to explore?''';
     }
   }
 
-  // Default learning path
+  /// Creates a structured learning path based on skill level
+  /// Considers weekly time commitment and progressive difficulty
   LearningPath _getDefaultLearningPath(
     String userId,
     String skillLevel,
@@ -790,6 +840,7 @@ What specific aspect would you like to explore?''';
   ) {
     List<LearningPhase> phases = [];
 
+    // Beginner path focuses on fundamentals
     if (skillLevel == 'beginner') {
       phases = [
         LearningPhase(
@@ -834,7 +885,9 @@ What specific aspect would you like to explore?''';
   }
 }
 
-// Model classes
+/// Models for learning path feature
+/// These represent structured learning journeys
+
 class LearningPath {
   final String id;
   final String userId;
