@@ -4,6 +4,8 @@ import 'package:procode/models/progress_model.dart';
 import 'package:procode/config/app_colors.dart';
 import 'package:procode/screens/courses/course_detail_screen.dart';
 
+/// Card widget showing active courses with detailed progress information
+/// Displays on the dashboard to help students quickly resume their learning
 class ContinueLearningCard extends StatelessWidget {
   final Course course;
   final Progress? progress;
@@ -18,17 +20,20 @@ class ContinueLearningCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Calculate actual values from progress
+    // Extract progress metrics from the progress model
     final lessonsCompleted = progress?.completedLessons.length ?? 0;
     final xpEarned = progress?.totalXpEarned ?? 0;
     final currentModule = progress?.currentModuleId ?? '';
+
+    // Parse module number from ID (format: module_1, module_2, etc.)
     final moduleNumber =
         currentModule.isNotEmpty ? currentModule.split('_').last : '1';
 
-    // Format last accessed time
+    // Calculate human-readable last accessed time
     String lastAccessedText = 'Not started';
     if (progress?.lastAccessedAt != null) {
       final difference = DateTime.now().difference(progress!.lastAccessedAt);
+      // Show time in most appropriate unit
       if (difference.inMinutes < 60) {
         lastAccessedText = '${difference.inMinutes}m ago';
       } else if (difference.inHours < 24) {
@@ -42,6 +47,7 @@ class ContinueLearningCard extends StatelessWidget {
 
     return InkWell(
       onTap: () {
+        // Navigate to course detail to continue learning
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -55,6 +61,7 @@ class ContinueLearningCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(16),
+          // Highlight active courses with primary color border
           border: Border.all(
             color: AppColors.primary.withOpacity(0.3),
             width: 1,
@@ -62,7 +69,7 @@ class ContinueLearningCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Course Icon
+            // Course icon with language-specific coloring
             Container(
               width: 60,
               height: 60,
@@ -72,6 +79,7 @@ class ContinueLearningCard extends StatelessWidget {
               ),
               child: Center(
                 child: Text(
+                  // Use custom icon if available, otherwise language abbreviation
                   course.icon.isNotEmpty
                       ? course.icon
                       : course.language.substring(0, 2).toUpperCase(),
@@ -84,11 +92,12 @@ class ContinueLearningCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 16),
-            // Course Details
+            // Course details and progress information
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Course title
                   Text(
                     course.title,
                     style: const TextStyle(
@@ -100,6 +109,7 @@ class ContinueLearningCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
+                  // Current module and last accessed info
                   Row(
                     children: [
                       if (currentModule.isNotEmpty) ...[
@@ -130,7 +140,7 @@ class ContinueLearningCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  // Progress Bar
+                  // Visual progress bar
                   ClipRRect(
                     borderRadius: BorderRadius.circular(4),
                     child: LinearProgressIndicator(
@@ -143,7 +153,7 @@ class ContinueLearningCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  // Stats Row
+                  // Progress statistics
                   Row(
                     children: [
                       Text(
@@ -178,12 +188,13 @@ class ContinueLearningCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 16),
-            // Completion Percentage
+            // Completion percentage display
             Column(
               children: [
                 Text(
                   '${completionPercentage.toInt()}%',
                   style: TextStyle(
+                    // Green color for completed courses
                     color: completionPercentage >= 100
                         ? Colors.green
                         : Colors.white,
@@ -206,6 +217,7 @@ class ContinueLearningCard extends StatelessWidget {
     );
   }
 
+  /// Returns language-specific color for visual consistency across the app
   Color _getCourseColor(String language) {
     switch (language.toLowerCase()) {
       case 'python':
