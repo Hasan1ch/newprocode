@@ -14,6 +14,8 @@ import 'package:procode/screens/quiz/quiz_categories_screen.dart';
 import 'package:procode/screens/profile/profile_screen.dart';
 import 'package:procode/utils/app_logger.dart';
 
+/// Main dashboard screen that serves as the app's navigation hub
+/// Uses IndexedStack to maintain state across tab switches
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
@@ -22,9 +24,10 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  int _selectedIndex = 0;
-  bool _isInitialized = false;
+  int _selectedIndex = 0; // Currently selected tab
+  bool _isInitialized = false; // Prevents duplicate initialization
 
+  // All main screens accessible from bottom navigation
   final List<Widget> _screens = [
     const HomeTab(),
     const CoursesListScreen(),
@@ -37,6 +40,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
+    // Load initial data after the first frame to avoid build conflicts
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_isInitialized) {
         _loadInitialData();
@@ -45,6 +49,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
   }
 
+  /// Loads all necessary data when dashboard initializes
+  /// This includes user data, courses, and real-time listeners
   Future<void> _loadInitialData() async {
     try {
       final authProvider = context.read<AuthProvider>();
@@ -54,20 +60,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
       if (authProvider.firebaseUser != null) {
         final userId = authProvider.firebaseUser!.uid;
 
-        // Load user data first
+        // Load user profile data first
         await userProvider.loadUser(userId);
 
-        // Load courses using the existing method
+        // Load all available and enrolled courses
         await courseProvider.loadCourses();
 
-        // Initialize real-time listeners if the method exists
+        // Set up real-time updates if available
         if (courseProvider.runtimeType
             .toString()
             .contains('initializeRealTimeListeners')) {
           await courseProvider.initializeRealTimeListeners();
         }
 
-        // Update streak on login
+        // Update user's streak for gamification
         await _updateStreakOnLogin(userId);
 
         AppLogger.info('Dashboard initialized successfully');
@@ -77,7 +83,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  // Update streak when user logs in
+  /// Updates the user's daily streak when they log in
+  /// Important for maintaining engagement through gamification
   Future<void> _updateStreakOnLogin(String userId) async {
     try {
       final databaseService = DatabaseService();
@@ -87,6 +94,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  /// Public method to allow child widgets to navigate to different tabs
   void navigateToTab(int index) {
     setState(() {
       _selectedIndex = index;
@@ -98,6 +106,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
+      // IndexedStack maintains widget state when switching tabs
       body: IndexedStack(
         index: _selectedIndex,
         children: _screens,
@@ -105,6 +114,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
+          // Subtle shadow for depth
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.1),
@@ -133,6 +143,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  /// Builds individual navigation bar items with selection state
   Widget _buildNavItem(IconData icon, String label, int index) {
     final theme = Theme.of(context);
     final isSelected = _selectedIndex == index;
@@ -163,16 +174,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 }
 
+/// Home tab showing user stats, progress, and quick actions
 class HomeTab extends StatelessWidget {
   const HomeTab({super.key});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // Watch providers for real-time updates
     final userProvider = context.watch<UserProvider>();
     final courseProvider = context.watch<CourseProvider>();
 
-    // Use real-time data from providers
+    // Extract data from providers
     final user = userProvider.user;
     final isLoading = userProvider.isLoading || courseProvider.isLoading;
 
@@ -180,6 +193,7 @@ class HomeTab extends StatelessWidget {
       backgroundColor: theme.colorScheme.background,
       body: SafeArea(
         child: RefreshIndicator(
+          // Pull to refresh functionality
           onRefresh: () async {
             await Future.wait([
               courseProvider.refresh(),
@@ -195,6 +209,7 @@ class HomeTab extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Welcome header with user name
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -221,14 +236,14 @@ class HomeTab extends StatelessWidget {
                             icon: const Icon(Icons.notifications_outlined),
                             color: theme.colorScheme.onBackground,
                             onPressed: () {
-                              // Show notifications
+                              // TODO: Implement notifications screen
                             },
                           ),
                         ],
                       ),
                       const SizedBox(height: 24),
 
-                      // Real-time Stats Cards
+                      // Real-time stats cards showing user progress
                       Row(
                         children: [
                           Expanded(
@@ -264,7 +279,7 @@ class HomeTab extends StatelessWidget {
                       ),
                       const SizedBox(height: 24),
 
-                      // Continue Learning section with actual progress
+                      // Continue Learning section for enrolled courses
                       if (courseProvider.enrolledCourses.isNotEmpty) ...[
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -275,9 +290,11 @@ class HomeTab extends StatelessWidget {
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
+                            // Show "View All" if more than 2 courses enrolled
                             if (courseProvider.enrolledCourses.length > 2)
                               TextButton(
                                 onPressed: () {
+                                  // Navigate to courses tab
                                   final parent =
                                       context.findAncestorStateOfType<
                                           _DashboardScreenState>();
@@ -290,6 +307,7 @@ class HomeTab extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: 16),
+                        // Show up to 2 enrolled courses
                         ...courseProvider.enrolledCourses.take(2).map((course) {
                           final progress =
                               courseProvider.getProgressForCourse(course.id);
@@ -306,7 +324,7 @@ class HomeTab extends StatelessWidget {
                           );
                         }).toList(),
                       ] else if (!isLoading) ...[
-                        // Show empty state when no courses are enrolled
+                        // Empty state when no courses enrolled
                         Container(
                           padding: const EdgeInsets.symmetric(vertical: 32),
                           child: Center(
@@ -334,6 +352,7 @@ class HomeTab extends StatelessWidget {
                                 const SizedBox(height: 24),
                                 ElevatedButton(
                                   onPressed: () {
+                                    // Navigate to courses tab
                                     final parent =
                                         context.findAncestorStateOfType<
                                             _DashboardScreenState>();
@@ -349,7 +368,7 @@ class HomeTab extends StatelessWidget {
                         ),
                       ],
 
-                      // Loading state for courses
+                      // Loading indicator while fetching courses
                       if (isLoading &&
                           courseProvider.enrolledCourses.isEmpty) ...[
                         const Center(
@@ -362,7 +381,7 @@ class HomeTab extends StatelessWidget {
 
                       const SizedBox(height: 24),
 
-                      // Additional Stats Section
+                      // Additional progress statistics
                       if (user != null && userProvider.userStats != null) ...[
                         Text(
                           'Your Progress',
@@ -412,7 +431,7 @@ class HomeTab extends StatelessWidget {
                         const SizedBox(height: 24),
                       ],
 
-                      // Daily Challenge
+                      // Daily Challenge section
                       Text(
                         'Daily Challenge',
                         style: theme.textTheme.headlineSmall?.copyWith(
@@ -432,6 +451,7 @@ class HomeTab extends StatelessWidget {
     );
   }
 
+  /// Builds individual progress item for the stats section
   Widget _buildProgressItem(
       String label, String value, IconData icon, ThemeData theme) {
     return Column(
