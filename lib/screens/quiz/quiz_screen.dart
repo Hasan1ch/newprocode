@@ -10,6 +10,8 @@ import 'package:procode/widgets/animations/slide_animation.dart';
 import 'package:procode/widgets/common/custom_button.dart';
 import 'package:procode/config/theme.dart';
 
+/// Main quiz screen where users answer questions
+/// Manages timer, question navigation, and answer submission
 class QuizScreen extends StatefulWidget {
   const QuizScreen({Key? key}) : super(key: key);
 
@@ -25,15 +27,18 @@ class _QuizScreenState extends State<QuizScreen> {
   @override
   void initState() {
     super.initState();
+    // Start the countdown timer immediately
     _startTimer();
   }
 
   @override
   void dispose() {
+    // Clean up timer to prevent memory leaks
     _timer?.cancel();
     super.dispose();
   }
 
+  /// Starts a countdown timer that updates every second
   void _startTimer() {
     final quizProvider = context.read<QuizProvider>();
 
@@ -44,11 +49,13 @@ class _QuizScreenState extends State<QuizScreen> {
         timer.cancel();
         _handleTimeUp();
       } else {
+        // Update remaining time in provider
         quizProvider.updateRemainingTime(remainingTime);
       }
     });
   }
 
+  /// Handles quiz timeout - shows dialog and auto-submits
   void _handleTimeUp() {
     showDialog(
       context: context,
@@ -70,6 +77,7 @@ class _QuizScreenState extends State<QuizScreen> {
     );
   }
 
+  /// Updates selected answer state when user taps an option
   void _selectAnswer(String answer) {
     if (!_isAnswerLocked) {
       setState(() {
@@ -78,16 +86,18 @@ class _QuizScreenState extends State<QuizScreen> {
     }
   }
 
+  /// Confirms the selected answer and locks it
   void _confirmAnswer() {
     if (_selectedAnswer != null) {
       final quizProvider = context.read<QuizProvider>();
+      // Save answer to provider
       quizProvider.answerQuestion(_selectedAnswer!);
 
       setState(() {
         _isAnswerLocked = true;
       });
 
-      // Auto-proceed after a short delay
+      // Auto-proceed after a short delay for better UX
       Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) {
           _nextQuestion();
@@ -96,9 +106,11 @@ class _QuizScreenState extends State<QuizScreen> {
     }
   }
 
+  /// Moves to next question or submits quiz if on last question
   void _nextQuestion() {
     final quizProvider = context.read<QuizProvider>();
 
+    // Reset answer selection for next question
     setState(() {
       _selectedAnswer = null;
       _isAnswerLocked = false;
@@ -111,6 +123,7 @@ class _QuizScreenState extends State<QuizScreen> {
     }
   }
 
+  /// Submits the quiz and navigates to results screen
   void _submitQuiz() async {
     _timer?.cancel();
 
@@ -118,6 +131,7 @@ class _QuizScreenState extends State<QuizScreen> {
     await quizProvider.submitQuiz();
 
     if (mounted) {
+      // Replace current screen to prevent going back
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -127,6 +141,7 @@ class _QuizScreenState extends State<QuizScreen> {
     }
   }
 
+  /// Shows confirmation dialog when user tries to exit quiz
   void _showExitConfirmation() {
     showDialog(
       context: context,
@@ -141,8 +156,8 @@ class _QuizScreenState extends State<QuizScreen> {
           ),
           TextButton(
             onPressed: () {
-              Navigator.pop(context);
-              Navigator.pop(context);
+              Navigator.pop(context); // Close dialog
+              Navigator.pop(context); // Exit quiz
             },
             child: const Text(
               'Exit',
@@ -157,6 +172,7 @@ class _QuizScreenState extends State<QuizScreen> {
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
+      // Intercept back button to show exit confirmation
       onWillPop: () async {
         _showExitConfirmation();
         return false;
@@ -180,6 +196,7 @@ class _QuizScreenState extends State<QuizScreen> {
             },
           ),
           actions: [
+            // Timer widget in app bar
             Consumer<QuizProvider>(
               builder: (context, quizProvider, child) {
                 return Padding(
@@ -205,7 +222,7 @@ class _QuizScreenState extends State<QuizScreen> {
 
             return Column(
               children: [
-                // Progress bar
+                // Progress bar showing quiz completion
                 Container(
                   height: 4,
                   margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -217,7 +234,7 @@ class _QuizScreenState extends State<QuizScreen> {
                 ),
                 const SizedBox(height: 8),
 
-                // Question counter
+                // Question counter and navigation dots
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
@@ -235,11 +252,12 @@ class _QuizScreenState extends State<QuizScreen> {
                   ),
                 ),
 
-                // Question content
+                // Question content area
                 Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(16),
                     child: FadeAnimation(
+                      // Unique key forces animation on question change
                       key: ValueKey(quizProvider.currentQuestionIndex),
                       child: QuestionWidget(
                         question: question,
@@ -251,7 +269,7 @@ class _QuizScreenState extends State<QuizScreen> {
                   ),
                 ),
 
-                // Bottom action bar
+                // Bottom action bar with skip/confirm/next buttons
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -263,12 +281,14 @@ class _QuizScreenState extends State<QuizScreen> {
                   child: SafeArea(
                     child: Row(
                       children: [
+                        // Skip button (not shown on last question)
                         if (!quizProvider.isLastQuestion)
                           Expanded(
                             child: TextButton(
                               onPressed: _isAnswerLocked
                                   ? null
                                   : () {
+                                      // Skip question without answering
                                       if (_selectedAnswer != null) {
                                         _confirmAnswer();
                                       }
@@ -280,6 +300,7 @@ class _QuizScreenState extends State<QuizScreen> {
                             ),
                           ),
                         const SizedBox(width: 16),
+                        // Main action button
                         Expanded(
                           flex: 2,
                           child: SlideAnimation(
@@ -310,6 +331,7 @@ class _QuizScreenState extends State<QuizScreen> {
     );
   }
 
+  /// Builds question navigation dots for quick overview
   Widget _buildQuestionNavigation(QuizProvider quizProvider) {
     return Container(
       height: 32,
@@ -327,6 +349,7 @@ class _QuizScreenState extends State<QuizScreen> {
             final isCurrent = index == quizProvider.currentQuestionIndex;
 
             return GestureDetector(
+              // Allow navigation to answered questions only
               onTap:
                   isAnswered ? () => quizProvider.jumpToQuestion(index) : null,
               child: Container(
