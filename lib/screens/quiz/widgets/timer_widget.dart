@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:procode/config/theme.dart';
 
+/// Compact timer widget for displaying remaining time in quizzes
+/// Shows visual warnings when time is running low
 class TimerWidget extends StatelessWidget {
   final int seconds;
   final int totalSeconds;
@@ -13,24 +15,30 @@ class TimerWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Convert seconds to MM:SS format for display
     final minutes = seconds ~/ 60;
     final remainingSeconds = seconds % 60;
     final timeString =
         '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
 
+    // Calculate progress for circular indicator
     final progress = totalSeconds > 0 ? seconds / totalSeconds : 0.0;
-    final isLowTime = seconds <= 60; // Less than 1 minute
-    final isCriticalTime = seconds <= 30; // Less than 30 seconds
+
+    // Visual warnings at different time thresholds
+    final isLowTime = seconds <= 60; // Less than 1 minute - yellow warning
+    final isCriticalTime = seconds <= 30; // Less than 30 seconds - red alert
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
+        // Dynamic background color based on remaining time
         color: isCriticalTime
             ? AppTheme.error.withOpacity(0.1)
             : isLowTime
                 ? AppTheme.warning.withOpacity(0.1)
                 : AppTheme.surface,
         borderRadius: BorderRadius.circular(20),
+        // Matching border color for emphasis
         border: Border.all(
           color: isCriticalTime
               ? AppTheme.error
@@ -42,6 +50,7 @@ class TimerWidget extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Animated progress indicator with icon
           AnimatedContainer(
             duration: const Duration(milliseconds: 300),
             width: 24,
@@ -49,6 +58,7 @@ class TimerWidget extends StatelessWidget {
             child: Stack(
               alignment: Alignment.center,
               children: [
+                // Circular progress shows time remaining visually
                 CircularProgressIndicator(
                   value: progress,
                   strokeWidth: 3,
@@ -61,6 +71,7 @@ class TimerWidget extends StatelessWidget {
                             : AppTheme.primary,
                   ),
                 ),
+                // Timer icon in center
                 Icon(
                   Icons.timer,
                   size: 14,
@@ -74,6 +85,7 @@ class TimerWidget extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
+          // Time display with animated color changes
           AnimatedDefaultTextStyle(
             duration: const Duration(milliseconds: 300),
             style: TextStyle(
@@ -93,6 +105,8 @@ class TimerWidget extends StatelessWidget {
   }
 }
 
+/// Full-screen countdown timer for individual questions
+/// Creates urgency and helps pace quiz-taking
 class QuestionTimer extends StatefulWidget {
   final int seconds;
   final VoidCallback onTimeUp;
@@ -115,20 +129,25 @@ class _QuestionTimerState extends State<QuestionTimer>
   @override
   void initState() {
     super.initState();
+    // Create countdown animation matching the question duration
     _controller = AnimationController(
       duration: Duration(seconds: widget.seconds),
       vsync: this,
     );
 
+    // Animation goes from 1.0 to 0.0 as time runs out
     _animation = Tween<double>(
       begin: 1.0,
       end: 0.0,
     ).animate(CurvedAnimation(
       parent: _controller,
-      curve: Curves.linear,
+      curve: Curves.linear, // Linear for accurate time representation
     ));
 
+    // Start countdown immediately
     _controller.forward();
+
+    // Trigger callback when time runs out
     _controller.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
         widget.onTimeUp();
@@ -147,11 +166,14 @@ class _QuestionTimerState extends State<QuestionTimer>
     return AnimatedBuilder(
       animation: _animation,
       builder: (context, child) {
+        // Calculate remaining seconds from animation value
         final remainingSeconds = (widget.seconds * _animation.value).ceil();
+        // Show warning state in last 5 seconds
         final isLowTime = remainingSeconds <= 5;
 
         return Column(
           children: [
+            // Large countdown number for visibility
             Text(
               remainingSeconds.toString(),
               style: TextStyle(
@@ -161,12 +183,14 @@ class _QuestionTimerState extends State<QuestionTimer>
               ),
             ),
             const SizedBox(height: 8),
+            // Circular progress indicator
             Container(
               width: 100,
               height: 100,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
+                  // Main progress circle
                   SizedBox(
                     width: 100,
                     height: 100,
@@ -179,6 +203,7 @@ class _QuestionTimerState extends State<QuestionTimer>
                       ),
                     ),
                   ),
+                  // Warning icon appears in last 5 seconds
                   if (isLowTime)
                     AnimatedContainer(
                       duration: const Duration(milliseconds: 500),
