@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:procode/config/app_colors.dart';
 
+/// Daily challenge card widget that promotes consistent learning
+/// Shows a new coding challenge each day with XP rewards
 class DailyChallengeCard extends StatelessWidget {
   const DailyChallengeCard({Key? key}) : super(key: key);
 
@@ -10,6 +12,7 @@ class DailyChallengeCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
+        // Eye-catching gradient to draw attention
         gradient: LinearGradient(
           colors: [
             AppColors.primary,
@@ -25,6 +28,7 @@ class DailyChallengeCard extends StatelessWidget {
         children: [
           Row(
             children: [
+              // Challenge icon container
               Container(
                 width: 50,
                 height: 50,
@@ -39,6 +43,7 @@ class DailyChallengeCard extends StatelessWidget {
                 ),
               ),
               const Spacer(),
+              // XP reward badge to motivate participation
               Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -57,6 +62,7 @@ class DailyChallengeCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
+          // Challenge title
           const Text(
             'Array Manipulation',
             style: TextStyle(
@@ -66,6 +72,7 @@ class DailyChallengeCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
+          // Challenge description
           Text(
             'Write a function to find the maximum subarray sum',
             style: TextStyle(
@@ -77,6 +84,7 @@ class DailyChallengeCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              // Time remaining indicator creates urgency
               Row(
                 children: [
                   Icon(
@@ -94,9 +102,10 @@ class DailyChallengeCard extends StatelessWidget {
                   ),
                 ],
               ),
+              // Call-to-action button
               TextButton(
                 onPressed: () {
-                  // Navigate to challenge
+                  // TODO: Navigate to challenge in code editor
                 },
                 style: TextButton.styleFrom(
                   backgroundColor: Colors.white,
