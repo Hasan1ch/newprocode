@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:procode/config/app_colors.dart';
 
+/// Highly customizable text field widget used throughout ProCode
+/// Provides consistent styling while allowing extensive customization
+/// This is the foundation for all text inputs in the app
 class CustomTextField extends StatefulWidget {
   final String? label;
   final String? hint;
@@ -97,24 +100,28 @@ class _CustomTextFieldState extends State<CustomTextField> {
   void initState() {
     super.initState();
     _obscureText = widget.obscureText;
+    // Use provided focus node or create our own
     _focusNode = widget.focusNode ?? FocusNode();
     _focusNode.addListener(_onFocusChange);
   }
 
   @override
   void dispose() {
+    // Only dispose if we created the focus node
     if (widget.focusNode == null) {
       _focusNode.dispose();
     }
     super.dispose();
   }
 
+  /// Tracks focus state for visual feedback
   void _onFocusChange() {
     setState(() {
       _isFocused = _focusNode.hasFocus;
     });
   }
 
+  /// Toggles password visibility
   void _toggleObscureText() {
     setState(() {
       _obscureText = !_obscureText;
@@ -130,17 +137,20 @@ class _CustomTextFieldState extends State<CustomTextField> {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
+        // Optional label above the field
         if (widget.label != null) ...[
           Text(
             widget.label!,
             style: widget.labelStyle ??
                 theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w600,
+                  // Red label color for error state
                   color: widget.errorText != null ? AppColors.error : null,
                 ),
           ),
           const SizedBox(height: 8),
         ],
+        // Main text field
         TextFormField(
           controller: widget.controller,
           focusNode: _focusNode,
@@ -149,6 +159,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
           obscureText: _obscureText,
           readOnly: widget.readOnly,
           enabled: widget.enabled,
+          // Force single line for password fields
           maxLines: widget.obscureText ? 1 : widget.maxLines,
           minLines: widget.minLines,
           maxLength: widget.maxLength,
@@ -178,6 +189,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
                 ),
             prefixIcon: widget.prefixIcon,
             prefixText: widget.prefixText,
+            // Auto-add visibility toggle for password fields
             suffixIcon: widget.obscureText
                 ? IconButton(
                     icon: Icon(
@@ -188,6 +200,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
                   )
                 : widget.suffixIcon,
             suffixText: widget.suffixText,
+            // Default border styles with smooth transitions
             border: widget.border ??
                 OutlineInputBorder(
                   borderRadius: BorderRadius.circular(defaultBorderRadius),
@@ -226,9 +239,11 @@ class _CustomTextFieldState extends State<CustomTextField> {
                   borderRadius: BorderRadius.circular(defaultBorderRadius),
                   borderSide: BorderSide.none,
                 ),
+            // Hide built-in counter to use custom one
             counterText: '',
           ),
         ),
+        // Custom character counter
         if (widget.maxLength != null) ...[
           const SizedBox(height: 4),
           Align(
@@ -246,7 +261,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
   }
 }
 
-// Specialized text fields
+/// Specialized email input field with proper keyboard and validation
 class EmailTextField extends StatelessWidget {
   final TextEditingController? controller;
   final String? label;
@@ -276,6 +291,7 @@ class EmailTextField extends StatelessWidget {
       prefixIcon: const Icon(Icons.email_outlined),
       onChanged: onChanged,
       validator: validator,
+      // Prevent spaces in email addresses
       inputFormatters: [
         FilteringTextInputFormatter.deny(RegExp(r'\s')),
       ],
@@ -283,6 +299,7 @@ class EmailTextField extends StatelessWidget {
   }
 }
 
+/// Specialized password field with visibility toggle
 class PasswordTextField extends StatelessWidget {
   final TextEditingController? controller;
   final String? label;
@@ -307,7 +324,7 @@ class PasswordTextField extends StatelessWidget {
       controller: controller,
       label: label ?? 'Password',
       hint: hint ?? 'Enter your password',
-      obscureText: true,
+      obscureText: true, // Enables password mode
       textInputAction: textInputAction,
       prefixIcon: const Icon(Icons.lock_outline),
       onChanged: onChanged,
@@ -316,6 +333,7 @@ class PasswordTextField extends StatelessWidget {
   }
 }
 
+/// Search field with clear button and rounded design
 class SearchTextField extends StatelessWidget {
   final TextEditingController? controller;
   final String? hint;
@@ -336,6 +354,7 @@ class SearchTextField extends StatelessWidget {
       controller: controller,
       hint: hint ?? 'Search...',
       prefixIcon: const Icon(Icons.search),
+      // Show clear button when text is present
       suffixIcon: controller?.text.isNotEmpty == true
           ? IconButton(
               icon: const Icon(Icons.clear),
@@ -347,11 +366,12 @@ class SearchTextField extends StatelessWidget {
           : null,
       onChanged: onChanged,
       filled: true,
-      borderRadius: 100,
+      borderRadius: 100, // Fully rounded
     );
   }
 }
 
+/// Multi-line text field for long content
 class MultilineTextField extends StatelessWidget {
   final TextEditingController? controller;
   final String? label;
@@ -391,7 +411,8 @@ class MultilineTextField extends StatelessWidget {
   }
 }
 
-// Convenience constructor for auth screens
+/// Legacy compatibility wrapper for auth screens
+/// Maps old API to new CustomTextField
 class AuthTextField extends StatelessWidget {
   final TextEditingController? controller;
   final String? hintText;
