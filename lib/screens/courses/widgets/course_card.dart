@@ -3,6 +3,8 @@ import 'package:procode/models/course_model.dart';
 import 'package:procode/screens/courses/course_detail_screen.dart';
 import 'package:procode/config/app_colors.dart';
 
+/// Course card widget for displaying courses in a grid layout
+/// Shows course information with visual indicators for enrollment status and progress
 class CourseCard extends StatelessWidget {
   final Course course;
   final bool isEnrolled;
@@ -19,6 +21,7 @@ class CourseCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: () {
+        // Navigate to detailed course view when tapped
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -31,6 +34,7 @@ class CourseCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(16),
+          // Highlight enrolled courses with a subtle border
           border: Border.all(
             color: isEnrolled
                 ? AppColors.primary.withOpacity(0.3)
@@ -40,10 +44,11 @@ class CourseCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Course Image
+            // Course header with language-specific gradient background
             Container(
               height: 120,
               decoration: BoxDecoration(
+                // Each programming language gets its own color theme
                 gradient: LinearGradient(
                   colors: [
                     _getCourseColor(course.language),
@@ -58,6 +63,7 @@ class CourseCard extends StatelessWidget {
                 ),
               ),
               child: Center(
+                // Display language abbreviation as a large icon
                 child: Text(
                   course.language.substring(0, 2).toUpperCase(),
                   style: const TextStyle(
@@ -68,13 +74,14 @@ class CourseCard extends StatelessWidget {
                 ),
               ),
             ),
-            // Course Info
+            // Course information section
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Course title with ellipsis for long names
                     Text(
                       course.title,
                       style: const TextStyle(
@@ -86,6 +93,7 @@ class CourseCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
+                    // Difficulty badge with color coding
                     Text(
                       course.difficulty,
                       style: TextStyle(
@@ -95,7 +103,9 @@ class CourseCard extends StatelessWidget {
                       ),
                     ),
                     const Spacer(),
+                    // Bottom section shows different info based on enrollment status
                     if (isEnrolled) ...[
+                      // For enrolled users, show progress tracking
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -120,6 +130,7 @@ class CourseCard extends StatelessWidget {
                             ],
                           ),
                           const SizedBox(height: 4),
+                          // Visual progress bar for quick status check
                           ClipRRect(
                             borderRadius: BorderRadius.circular(4),
                             child: LinearProgressIndicator(
@@ -134,6 +145,7 @@ class CourseCard extends StatelessWidget {
                         ],
                       ),
                     ] else ...[
+                      // For non-enrolled users, show enrollment count
                       Row(
                         children: [
                           Icon(
@@ -162,6 +174,8 @@ class CourseCard extends StatelessWidget {
     );
   }
 
+  /// Returns a color theme based on the programming language
+  /// This helps users quickly identify course types visually
   Color _getCourseColor(String language) {
     switch (language.toLowerCase()) {
       case 'python':
@@ -176,6 +190,8 @@ class CourseCard extends StatelessWidget {
     }
   }
 
+  /// Maps difficulty levels to colors for visual hierarchy
+  /// Green for beginner, orange for intermediate, red for advanced
   Color _getDifficultyColor(String difficulty) {
     switch (difficulty.toLowerCase()) {
       case 'beginner':
