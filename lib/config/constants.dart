@@ -1,27 +1,32 @@
 import 'package:procode/models/achievement_model.dart';
 
+// Main configuration file that stores all the app's constants and settings
 class AppConstants {
-  // App Info
+  // Basic app information for branding and versioning
   static const String appName = 'ProCode';
   static const String appVersion = '1.0.0';
 
-  // API Keys - In production, these should be stored securely
-  // For development, you can temporarily hardcode them here
+  // API Keys for external services
+  // In production, these are fetched from environment variables for security
+  // The defaultValue is used during development for quick testing
   static const String geminiApiKey = String.fromEnvironment(
     'GEMINI_API_KEY',
-    defaultValue: 'YOUR_GEMINI_API_KEY_HERE',
+    defaultValue: 'AIzaSyBU11tY-o3SpExV5lXbS71Rs2LKhvcazr4',
   );
+
+  // Judge0 API for code execution and compilation
   static const String judge0ApiKey = String.fromEnvironment(
     'JUDGE0_API_KEY',
     defaultValue: '6a7488d9e2msh2d046a8ad2a723bp16d39ajsn7ed3c95e55b4',
   );
 
-  // URLs
+  // External links for legal and support pages
   static const String termsUrl = 'https://procode.app/terms';
   static const String privacyUrl = 'https://procode.app/privacy';
   static const String supportUrl = 'https://procode.app/support';
 
-  // Learning Goals
+  // Available learning paths users can choose from during onboarding
+  // This helps personalize their learning experience
   static const List<String> learningGoals = [
     'Web Development',
     'Mobile App Development',
@@ -34,7 +39,8 @@ class AppConstants {
     'General Programming',
   ];
 
-  // Programming Languages
+  // Supported programming languages in the app
+  // Users can select these as their preferred languages
   static const List<String> programmingLanguages = [
     'Python',
     'JavaScript',
@@ -48,14 +54,14 @@ class AppConstants {
     'Rust',
   ];
 
-  // Difficulty Levels
+  // Course difficulty options for filtering and categorization
   static const List<String> difficultyLevels = [
     'Beginner',
     'Intermediate',
     'Advanced',
   ];
 
-  // Course Categories
+  // Main course categories to organize learning content
   static const List<String> courseCategories = [
     'Programming Fundamentals',
     'Web Development',
@@ -68,27 +74,29 @@ class AppConstants {
     'System Design',
   ];
 
-  // XP Rewards
-  static const int lessonCompletionXP = 10;
-  static const int quizCompletionXP = 20;
-  static const int perfectQuizXP = 50;
-  static const int challengeCompletionXP = 30;
-  static const int dailyStreakXP = 5;
-  static const int weeklyStreakXP = 25;
-  static const int monthlyStreakXP = 100;
+  // Experience points awarded for different activities
+  // This drives the gamification system
+  static const int lessonCompletionXP = 10; // Basic lesson completion
+  static const int quizCompletionXP = 20; // Any quiz completion
+  static const int perfectQuizXP = 50; // 100% score on quiz
+  static const int challengeCompletionXP = 30; // Code challenge solved
+  static const int dailyStreakXP = 5; // Daily login bonus
+  static const int weeklyStreakXP = 25; // 7-day streak bonus
+  static const int monthlyStreakXP = 100; // 30-day streak bonus
 
-  // Level Requirements
+  // XP required to reach each level
+  // Players progress through these levels as they learn
   static const Map<int, int> levelRequirements = {
-    1: 0, // Beginner
-    2: 100, // Novice
-    3: 300, // Apprentice
-    4: 600, // Developer
-    5: 1000, // Expert
-    6: 1500, // Master
-    7: 2500, // Guru
+    1: 0, // Starting point
+    2: 100, // First milestone
+    3: 300, // Getting serious
+    4: 600, // Intermediate level
+    5: 1000, // Advanced learner
+    6: 1500, // Expert territory
+    7: 2500, // Master level
   };
 
-  // Level Names
+  // Display names for each level to show user progression
   static const Map<int, String> levelNames = {
     1: 'Beginner',
     2: 'Novice',
@@ -99,7 +107,8 @@ class AppConstants {
     7: 'Guru',
   };
 
-  // Default Avatars
+  // Pre-designed avatar options for user profiles
+  // Users can choose from these during registration or profile edit
   static const List<String> defaultAvatars = [
     'avatar_1.png',
     'avatar_2.png',
@@ -115,7 +124,8 @@ class AppConstants {
     'avatar_12.png',
   ];
 
-  // Code Editor Themes
+  // Available themes for the code editor
+  // Users can switch between these for comfortable coding
   static const Map<String, String> codeEditorThemes = {
     'light': 'Light',
     'dark': 'Dark',
@@ -123,7 +133,8 @@ class AppConstants {
     'dracula': 'Dracula',
   };
 
-  // Supported Languages for Code Editor
+  // Language IDs for Judge0 API
+  // These map our language names to Judge0's internal IDs
   static const Map<String, int> languageIds = {
     'python': 71,
     'javascript': 63,
@@ -135,7 +146,8 @@ class AppConstants {
   };
 }
 
-// Achievement definitions - Outside the AppConstants class
+// All achievements available in the app
+// Players unlock these by completing various tasks
 final List<Achievement> achievements = [
   Achievement(
     id: 'first_steps',
@@ -144,7 +156,7 @@ final List<Achievement> achievements = [
     iconAsset: 'assets/images/achievements/first_steps.png',
     xpReward: 50,
     category: 'learning',
-    rarity: 'common',
+    rarity: 'common', // Easy to get, encourages new users
   ),
   Achievement(
     id: 'quiz_master',
@@ -153,7 +165,7 @@ final List<Achievement> achievements = [
     iconAsset: 'assets/images/achievements/quiz_master.png',
     xpReward: 100,
     category: 'mastery',
-    rarity: 'rare',
+    rarity: 'rare', // Requires skill and knowledge
   ),
   Achievement(
     id: 'streak_starter',
@@ -162,7 +174,7 @@ final List<Achievement> achievements = [
     iconAsset: 'assets/images/achievements/streak_starter.png',
     xpReward: 75,
     category: 'dedication',
-    rarity: 'common',
+    rarity: 'common', // Encourages consistent learning
   ),
   Achievement(
     id: 'level_5',
@@ -171,7 +183,7 @@ final List<Achievement> achievements = [
     iconAsset: 'assets/images/achievements/level_5.png',
     xpReward: 150,
     category: 'learning',
-    rarity: 'rare',
+    rarity: 'rare', // Shows significant progress
   ),
   Achievement(
     id: 'course_complete',
@@ -180,7 +192,7 @@ final List<Achievement> achievements = [
     iconAsset: 'assets/images/achievements/course_complete.png',
     xpReward: 200,
     category: 'learning',
-    rarity: 'rare',
+    rarity: 'rare', // Major milestone
   ),
   Achievement(
     id: 'dedicated_learner',
@@ -189,7 +201,7 @@ final List<Achievement> achievements = [
     iconAsset: 'assets/images/achievements/dedicated_learner.png',
     xpReward: 300,
     category: 'dedication',
-    rarity: 'epic',
+    rarity: 'epic', // Shows real commitment
   ),
   Achievement(
     id: 'code_warrior',
@@ -198,7 +210,7 @@ final List<Achievement> achievements = [
     iconAsset: 'assets/images/achievements/code_warrior.png',
     xpReward: 250,
     category: 'mastery',
-    rarity: 'epic',
+    rarity: 'epic', // Proves coding skills
   ),
   Achievement(
     id: 'knowledge_seeker',
@@ -207,23 +219,26 @@ final List<Achievement> achievements = [
     iconAsset: 'assets/images/achievements/knowledge_seeker.png',
     xpReward: 500,
     category: 'learning',
-    rarity: 'legendary',
+    rarity: 'legendary', // Top tier achievement
   ),
 ];
 
-// Other achievement-related constants
+// Visual indicators for achievements
 class AchievementConstants {
+  // Emoji icons to represent achievement categories
   static const Map<String, String> categoryIcons = {
-    'learning': '📚',
-    'social': '👥',
-    'dedication': '🔥',
-    'mastery': '⭐',
+    'learning': '📚', // Knowledge acquisition
+    'social': '👥', // Community interaction
+    'dedication': '🔥', // Consistency and streaks
+    'mastery': '⭐', // Skill demonstration
   };
 
+  // Color-coded emojis to show achievement rarity
+  // Higher rarity means harder to obtain
   static const Map<String, String> rarityEmojis = {
-    'common': '⚪',
-    'rare': '🔵',
-    'epic': '🟣',
-    'legendary': '🟡',
+    'common': '⚪', // Basic achievements
+    'rare': '🔵', // Moderate difficulty
+    'epic': '🟣', // Challenging
+    'legendary': '🟡', // Elite status
   };
 }
