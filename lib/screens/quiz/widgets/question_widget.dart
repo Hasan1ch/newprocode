@@ -4,6 +4,9 @@ import 'package:procode/models/question_model.dart';
 import 'package:procode/config/app_colors.dart';
 import 'package:procode/widgets/animations/fade_animation.dart';
 
+/// Main widget that renders different types of quiz questions
+/// This is the core component of our quiz system that dynamically
+/// adapts its UI based on the question type
 class QuestionWidget extends StatelessWidget {
   final Question question;
   final String? selectedAnswer;
@@ -20,6 +23,8 @@ class QuestionWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Dynamically render the appropriate UI based on question type
+    // This allows us to support multiple question formats in our learning platform
     switch (question.type) {
       case 'mcq':
         return _buildMultipleChoice(context);
@@ -32,17 +37,21 @@ class QuestionWidget extends StatelessWidget {
       case 'debug':
         return _buildDebugCode(context);
       default:
+        // Fallback to MCQ if unknown type to prevent crashes
         return _buildMultipleChoice(context);
     }
   }
 
+  /// Builds the standard multiple choice question layout
+  /// Most common question type in our programming quizzes
   Widget _buildMultipleChoice(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildQuestionHeader(context),
 
-        // Display code snippet if present
+        // Only show code snippet if the question includes one
+        // Many programming questions need code examples
         if (question.codeSnippet != null &&
             question.codeSnippet!.isNotEmpty) ...[
           const SizedBox(height: 16),
@@ -50,15 +59,17 @@ class QuestionWidget extends StatelessWidget {
         ],
 
         const SizedBox(height: 24),
+        // Generate option cards with staggered fade animation
+        // Creates a smooth, professional presentation effect
         ...question.options!.asMap().entries.map((entry) {
           final index = entry.key;
           final option = entry.value;
           return FadeAnimation(
-            delay: index * 0.1,
+            delay: index * 0.1, // Stagger animations by 100ms
             child: _buildOptionCard(
               context,
               option,
-              String.fromCharCode(65 + index),
+              String.fromCharCode(65 + index), // Convert to A, B, C, D...
             ),
           );
         }),
@@ -66,6 +77,8 @@ class QuestionWidget extends StatelessWidget {
     );
   }
 
+  /// Builds the True/False question layout with large touch targets
+  /// Simplified UI for binary choices makes it easier for users
   Widget _buildTrueFalse(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -80,6 +93,7 @@ class QuestionWidget extends StatelessWidget {
         ],
 
         const SizedBox(height: 32),
+        // Side-by-side True/False buttons for better UX
         Row(
           children: [
             Expanded(
@@ -100,6 +114,8 @@ class QuestionWidget extends StatelessWidget {
     );
   }
 
+  /// Builds the code output prediction question
+  /// Tests students' ability to mentally execute code
   Widget _buildCodeOutput(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -110,6 +126,7 @@ class QuestionWidget extends StatelessWidget {
           _buildCodeSnippet(context),
           const SizedBox(height: 24),
         ],
+        // Use monospace font for code output options
         ...question.options!.asMap().entries.map((entry) {
           final index = entry.key;
           final option = entry.value;
@@ -122,6 +139,8 @@ class QuestionWidget extends StatelessWidget {
     );
   }
 
+  /// Builds the fill-in-the-blank code question
+  /// Students complete missing parts of code snippets
   Widget _buildFillCode(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = isDark ? AppColors.textLight : AppColors.textDark;
@@ -135,6 +154,7 @@ class QuestionWidget extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Instruction text to guide the user
               const Text(
                 'Complete the code:',
                 style: TextStyle(
@@ -148,6 +168,7 @@ class QuestionWidget extends StatelessWidget {
           ),
           const SizedBox(height: 24),
         ],
+        // Options displayed with monospace font for code consistency
         ...question.options!.asMap().entries.map((entry) {
           final index = entry.key;
           final option = entry.value;
@@ -160,6 +181,8 @@ class QuestionWidget extends StatelessWidget {
     );
   }
 
+  /// Builds the debug question layout
+  /// Challenges students to identify errors in code
   Widget _buildDebugCode(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = isDark ? AppColors.textLight : AppColors.textDark;
@@ -173,6 +196,7 @@ class QuestionWidget extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Visual indicator that this code has bugs
               Row(
                 children: [
                   const Icon(
@@ -192,6 +216,7 @@ class QuestionWidget extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 8),
+              // Show code with error highlighting
               _buildCodeSnippet(context, showError: true),
             ],
           ),
@@ -206,6 +231,7 @@ class QuestionWidget extends StatelessWidget {
           ),
           const SizedBox(height: 16),
         ],
+        // Present possible bug explanations as options
         ...question.options!.asMap().entries.map((entry) {
           final index = entry.key;
           final option = entry.value;
@@ -222,7 +248,8 @@ class QuestionWidget extends StatelessWidget {
     );
   }
 
-  // New method to build code snippets consistently
+  /// Creates a styled code snippet container with line numbers
+  /// Line numbers help during presentations and error discussions
   Widget _buildCodeSnippet(BuildContext context, {bool showError = false}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final codeBgColor =
@@ -249,7 +276,7 @@ class QuestionWidget extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Line numbers
+                // Line number column
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: question.codeSnippet!
@@ -269,7 +296,7 @@ class QuestionWidget extends StatelessWidget {
                   }).toList(),
                 ),
                 const SizedBox(width: 16),
-                // Code content
+                // Code content - selectable for easy copying
                 SelectableText(
                   question.codeSnippet!,
                   style: TextStyle(
@@ -287,6 +314,8 @@ class QuestionWidget extends StatelessWidget {
     );
   }
 
+  /// Builds the question header with difficulty badge and question text
+  /// Difficulty badges help users gauge question complexity
   Widget _buildQuestionHeader(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = isDark ? AppColors.textLight : AppColors.textDark;
@@ -296,7 +325,7 @@ class QuestionWidget extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Difficulty badge
+        // Difficulty indicator with color coding
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
@@ -313,6 +342,7 @@ class QuestionWidget extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
+        // Support markdown formatting for rich question content
         if (question.question.contains('```'))
           MarkdownBody(
             data: question.question,
@@ -348,6 +378,8 @@ class QuestionWidget extends StatelessWidget {
     );
   }
 
+  /// Creates an option card for multiple choice questions
+  /// Visual feedback shows selection state and correct/wrong answers
   Widget _buildOptionCard(BuildContext context, String option, String label) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final surfaceColor =
@@ -365,6 +397,7 @@ class QuestionWidget extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
+          // Dynamic background colors for visual feedback
           color: isCorrect
               ? AppColors.success.withOpacity(0.1)
               : isWrong
@@ -374,6 +407,7 @@ class QuestionWidget extends StatelessWidget {
                       : surfaceColor,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
+            // Highlight correct/wrong answers after submission
             color: isCorrect
                 ? AppColors.success
                 : isWrong
@@ -386,6 +420,7 @@ class QuestionWidget extends StatelessWidget {
         ),
         child: Row(
           children: [
+            // Option indicator with dynamic icons for feedback
             Container(
               width: 32,
               height: 32,
@@ -437,6 +472,8 @@ class QuestionWidget extends StatelessWidget {
     );
   }
 
+  /// Creates an option card specifically for code-related answers
+  /// Uses monospace font for better code readability
   Widget _buildCodeOptionCard(BuildContext context, String option) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final codeBgColor =
@@ -475,6 +512,7 @@ class QuestionWidget extends StatelessWidget {
         ),
         child: Row(
           children: [
+            // Radio button style indicators for code options
             if (isCorrect)
               const Icon(Icons.check_circle, color: AppColors.success, size: 20)
             else if (isWrong)
@@ -491,7 +529,7 @@ class QuestionWidget extends StatelessWidget {
                 option,
                 style: TextStyle(
                   fontSize: 14,
-                  fontFamily: 'monospace',
+                  fontFamily: 'monospace', // Code font for consistency
                   color: textColor,
                 ),
               ),
@@ -502,6 +540,8 @@ class QuestionWidget extends StatelessWidget {
     );
   }
 
+  /// Builds large, touch-friendly True/False option buttons
+  /// Design makes it easy to tap on mobile devices
   Widget _buildTrueFalseOption(BuildContext context, String label, bool value) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final surfaceColor =
@@ -509,6 +549,7 @@ class QuestionWidget extends StatelessWidget {
     final textColor = isDark ? AppColors.textLight : AppColors.textDark;
 
     // IMPORTANT: Use capitalized string values to match database format
+    // This ensures proper answer checking against stored correct answers
     final optionValue = value ? "True" : "False";
     final isSelected = selectedAnswer == optionValue;
     final isCorrect = isAnswerLocked && optionValue == question.correctAnswer;
@@ -518,7 +559,7 @@ class QuestionWidget extends StatelessWidget {
     return GestureDetector(
       onTap: isAnswerLocked ? null : () => onAnswerSelected(optionValue),
       child: Container(
-        height: 120,
+        height: 120, // Large touch target for better UX
         decoration: BoxDecoration(
           color: isCorrect
               ? AppColors.success.withOpacity(0.1)
@@ -542,6 +583,7 @@ class QuestionWidget extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            // Large icons for clear visual distinction
             Icon(
               value ? Icons.check_circle_outline : Icons.cancel_outlined,
               size: 48,
@@ -574,16 +616,18 @@ class QuestionWidget extends StatelessWidget {
     );
   }
 
+  /// Maps difficulty strings to appropriate colors
+  /// Visual color coding helps users quickly identify question difficulty
   Color _getDifficultyColor(String difficulty) {
     switch (difficulty.toLowerCase()) {
       case 'easy':
-        return AppColors.success;
+        return AppColors.success; // Green for easy
       case 'medium':
-        return AppColors.warning;
+        return AppColors.warning; // Orange for medium
       case 'hard':
-        return AppColors.error;
+        return AppColors.error; // Red for hard
       default:
-        return AppColors.primary;
+        return AppColors.primary; // Default color
     }
   }
 }
