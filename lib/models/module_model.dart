@@ -1,13 +1,16 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 /// Model representing a course module
+/// Groups related lessons into chapters
 class ModuleModel {
   final String id;
-  final String courseId;
+  final String courseId; // Parent course reference
   final String title;
   final String description;
-  final int orderIndex;
-  final List<String> lessonIds;
-  final String quizId;
-  final int estimatedMinutes;
+  final int orderIndex; // Module sequence in course
+  final List<String> lessonIds; // Ordered list of lessons
+  final String quizId; // Module completion quiz
+  final int estimatedMinutes; // Total time for all lessons
 
   ModuleModel({
     required this.id,
@@ -20,7 +23,7 @@ class ModuleModel {
     required this.estimatedMinutes,
   });
 
-  /// Create ModuleModel from JSON
+  /// Creates module from Firestore document
   factory ModuleModel.fromJson(Map<String, dynamic> json) {
     return ModuleModel(
       id: json['id'] ?? '',
@@ -34,7 +37,7 @@ class ModuleModel {
     );
   }
 
-  /// Convert ModuleModel to JSON
+  /// Converts module to Firestore format
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -48,7 +51,7 @@ class ModuleModel {
     };
   }
 
-  /// Create a copy with updated fields
+  /// Creates a modified copy of the module
   ModuleModel copyWith({
     String? id,
     String? courseId,
@@ -72,4 +75,5 @@ class ModuleModel {
   }
 }
 
+// Alias for cleaner imports
 typedef Module = ModuleModel;
