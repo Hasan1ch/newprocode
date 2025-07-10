@@ -3,9 +3,12 @@ import 'package:lottie/lottie.dart';
 import 'package:procode/models/achievement_model.dart';
 import 'dart:math' as math;
 
-// Add type alias
+// Add type alias for cleaner code
 typedef Achievement = AchievementModel;
 
+/// Spectacular animation widget for achievement unlocks
+/// Creates an immersive celebration moment when users earn achievements
+/// This reinforces positive behavior and makes accomplishments feel special
 class AchievementUnlockAnimation extends StatefulWidget {
   final Achievement achievement;
   final VoidCallback? onComplete;
@@ -23,34 +26,40 @@ class AchievementUnlockAnimation extends StatefulWidget {
 
 class _AchievementUnlockAnimationState extends State<AchievementUnlockAnimation>
     with TickerProviderStateMixin {
-  late AnimationController _scaleController;
-  late AnimationController _rotateController;
-  late AnimationController _shimmerController;
+  // Animation controllers for different effects
+  late AnimationController _scaleController; // Badge appearance
+  late AnimationController _rotateController; // Glow rotation
+  late AnimationController _shimmerController; // Shimmer effect
   late Animation<double> _scaleAnimation;
   late Animation<double> _rotateAnimation;
   late Animation<double> _shimmerAnimation;
 
+  // Controls when to show achievement details
   bool _showDetails = false;
 
   @override
   void initState() {
     super.initState();
 
+    // Scale animation - elastic bounce for badge entrance
     _scaleController = AnimationController(
       duration: Duration(milliseconds: 600),
       vsync: this,
     );
 
+    // Rotation animation - continuous glow rotation
     _rotateController = AnimationController(
       duration: Duration(seconds: 2),
       vsync: this,
     );
 
+    // Shimmer animation - light sweep across badge
     _shimmerController = AnimationController(
       duration: Duration(seconds: 2),
       vsync: this,
     );
 
+    // Configure scale with elastic curve for bouncy feel
     _scaleAnimation = Tween<double>(
       begin: 0,
       end: 1,
@@ -59,6 +68,7 @@ class _AchievementUnlockAnimationState extends State<AchievementUnlockAnimation>
       curve: Curves.elasticOut,
     ));
 
+    // Full rotation for glow effect
     _rotateAnimation = Tween<double>(
       begin: 0,
       end: 2 * math.pi,
@@ -67,6 +77,7 @@ class _AchievementUnlockAnimationState extends State<AchievementUnlockAnimation>
       curve: Curves.linear,
     ));
 
+    // Shimmer moves across the badge
     _shimmerAnimation = Tween<double>(
       begin: -1,
       end: 2,
@@ -75,12 +86,12 @@ class _AchievementUnlockAnimationState extends State<AchievementUnlockAnimation>
       curve: Curves.linear,
     ));
 
-    // Start animations
+    // Start all animations
     _scaleController.forward();
-    _rotateController.repeat();
-    _shimmerController.repeat();
+    _rotateController.repeat(); // Continuous rotation
+    _shimmerController.repeat(); // Continuous shimmer
 
-    // Show details after initial animation
+    // Reveal achievement details after initial animation
     Future.delayed(Duration(milliseconds: 800), () {
       if (mounted) {
         setState(() {
@@ -89,7 +100,7 @@ class _AchievementUnlockAnimationState extends State<AchievementUnlockAnimation>
       }
     });
 
-    // Complete after 4 seconds
+    // Auto-dismiss after 4 seconds
     Future.delayed(Duration(seconds: 4), () {
       if (widget.onComplete != null && mounted) {
         widget.onComplete!();
@@ -105,6 +116,8 @@ class _AchievementUnlockAnimationState extends State<AchievementUnlockAnimation>
     super.dispose();
   }
 
+  /// Maps achievement rarity to appropriate colors
+  /// Creates visual hierarchy - rarer achievements feel more special
   Color _getRarityColor() {
     switch (widget.achievement.rarity.toLowerCase()) {
       case 'common':
@@ -125,7 +138,7 @@ class _AchievementUnlockAnimationState extends State<AchievementUnlockAnimation>
     final rarityColor = _getRarityColor();
 
     return Scaffold(
-      backgroundColor: Colors.black87,
+      backgroundColor: Colors.black87, // Dark backdrop for contrast
       body: Center(
         child: AnimatedBuilder(
           animation: _scaleAnimation,
@@ -142,18 +155,18 @@ class _AchievementUnlockAnimationState extends State<AchievementUnlockAnimation>
                     BoxShadow(
                       color: rarityColor.withOpacity(0.5),
                       blurRadius: 30,
-                      spreadRadius: 10,
+                      spreadRadius: 10, // Large glow effect
                     ),
                   ],
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Lottie Animation Background
+                    // Layered animation stack
                     Stack(
                       alignment: Alignment.center,
                       children: [
-                        // Rotating glow
+                        // Rotating glow background
                         AnimatedBuilder(
                           animation: _rotateAnimation,
                           builder: (context, child) {
@@ -175,7 +188,7 @@ class _AchievementUnlockAnimationState extends State<AchievementUnlockAnimation>
                           },
                         ),
 
-                        // Achievement Icon
+                        // Achievement badge
                         Container(
                           width: 150,
                           height: 150,
@@ -199,7 +212,7 @@ class _AchievementUnlockAnimationState extends State<AchievementUnlockAnimation>
                           ),
                           child: Stack(
                             children: [
-                              // Shimmer effect
+                              // Animated shimmer overlay
                               AnimatedBuilder(
                                 animation: _shimmerAnimation,
                                 builder: (context, child) {
@@ -225,7 +238,7 @@ class _AchievementUnlockAnimationState extends State<AchievementUnlockAnimation>
                                 },
                               ),
 
-                              // Icon
+                              // Achievement icon
                               Center(
                                 child: Icon(
                                   _getAchievementIcon(),
@@ -237,7 +250,7 @@ class _AchievementUnlockAnimationState extends State<AchievementUnlockAnimation>
                           ),
                         ),
 
-                        // Lottie celebration
+                        // Confetti celebration overlay
                         if (_showDetails)
                           Lottie.asset(
                             'assets/animations/lottie/confetti.json',
@@ -250,12 +263,13 @@ class _AchievementUnlockAnimationState extends State<AchievementUnlockAnimation>
 
                     SizedBox(height: 24),
 
-                    // Achievement Details
+                    // Achievement details with fade-in
                     AnimatedOpacity(
                       opacity: _showDetails ? 1.0 : 0.0,
                       duration: Duration(milliseconds: 500),
                       child: Column(
                         children: [
+                          // Small caps title
                           Text(
                             'ACHIEVEMENT UNLOCKED!',
                             style: TextStyle(
@@ -266,6 +280,7 @@ class _AchievementUnlockAnimationState extends State<AchievementUnlockAnimation>
                             ),
                           ),
                           SizedBox(height: 12),
+                          // Achievement name
                           Text(
                             widget.achievement.name,
                             style: TextStyle(
@@ -275,6 +290,7 @@ class _AchievementUnlockAnimationState extends State<AchievementUnlockAnimation>
                             ),
                           ),
                           SizedBox(height: 8),
+                          // Achievement description
                           Text(
                             widget.achievement.description,
                             style: TextStyle(
@@ -285,9 +301,11 @@ class _AchievementUnlockAnimationState extends State<AchievementUnlockAnimation>
                             textAlign: TextAlign.center,
                           ),
                           SizedBox(height: 24),
+                          // Reward badges
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
+                              // XP reward badge
                               Container(
                                 padding: EdgeInsets.symmetric(
                                   horizontal: 16,
@@ -320,6 +338,7 @@ class _AchievementUnlockAnimationState extends State<AchievementUnlockAnimation>
                                 ),
                               ),
                               SizedBox(width: 16),
+                              // Rarity badge
                               Container(
                                 padding: EdgeInsets.symmetric(
                                   horizontal: 16,
@@ -357,6 +376,8 @@ class _AchievementUnlockAnimationState extends State<AchievementUnlockAnimation>
     );
   }
 
+  /// Maps achievement IDs to relevant icons
+  /// Creates visual consistency across achievement types
   IconData _getAchievementIcon() {
     // Map achievement IDs to icons
     switch (widget.achievement.id) {
@@ -375,16 +396,17 @@ class _AchievementUnlockAnimationState extends State<AchievementUnlockAnimation>
       case 'polyglot':
         return Icons.language;
       default:
-        return Icons.emoji_events;
+        return Icons.emoji_events; // Trophy for generic achievements
     }
   }
 
-  // Helper methods to create color shades
+  /// Creates darker shade of color for gradient effect
   Color _getDarkerShade(Color color) {
     final hsl = HSLColor.fromColor(color);
     return hsl.withLightness((hsl.lightness - 0.1).clamp(0.0, 1.0)).toColor();
   }
 
+  /// Creates lighter shade of color for gradient effect
   Color _getLighterShade(Color color) {
     final hsl = HSLColor.fromColor(color);
     return hsl.withLightness((hsl.lightness + 0.1).clamp(0.0, 1.0)).toColor();
