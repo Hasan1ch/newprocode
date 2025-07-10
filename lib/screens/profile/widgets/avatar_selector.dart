@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:procode/config/constants.dart';
 
+/// Avatar selector widget that allows users to choose profile pictures
+/// Supports camera, gallery upload, and predefined avatar selection
 class AvatarSelector extends StatefulWidget {
   final String? currentAvatarUrl;
   final Function(String) onAvatarSelected;
@@ -19,13 +21,13 @@ class AvatarSelector extends StatefulWidget {
 
 class _AvatarSelectorState extends State<AvatarSelector> {
   final ImagePicker _picker = ImagePicker();
-  String? _selectedImagePath;
-  String? _selectedDefaultAvatar;
+  String? _selectedImagePath; // Path to user-selected image
+  String? _selectedDefaultAvatar; // Name of selected default avatar
 
   @override
   void initState() {
     super.initState();
-    // Check if current avatar is a default one
+    // Check if current avatar is one of the default options
     if (widget.currentAvatarUrl != null) {
       final defaultIndex = AppConstants.defaultAvatars.indexWhere(
         (avatar) => widget.currentAvatarUrl!.contains(avatar),
@@ -36,19 +38,21 @@ class _AvatarSelectorState extends State<AvatarSelector> {
     }
   }
 
+  /// Handles image picking from camera or gallery
+  /// Applies size and quality constraints for optimal performance
   Future<void> _pickImage(ImageSource source) async {
     try {
       final XFile? image = await _picker.pickImage(
         source: source,
-        maxWidth: 512,
+        maxWidth: 512, // Limit size for storage efficiency
         maxHeight: 512,
-        imageQuality: 85,
+        imageQuality: 85, // Balance quality and file size
       );
 
       if (image != null) {
         setState(() {
           _selectedImagePath = image.path;
-          _selectedDefaultAvatar = null;
+          _selectedDefaultAvatar = null; // Clear default selection
         });
         widget.onAvatarSelected(image.path);
       }
@@ -61,14 +65,16 @@ class _AvatarSelectorState extends State<AvatarSelector> {
     }
   }
 
+  /// Selects a default avatar from predefined options
   void _selectDefaultAvatar(String avatarName) {
     setState(() {
       _selectedDefaultAvatar = avatarName;
-      _selectedImagePath = null;
+      _selectedImagePath = null; // Clear custom image selection
     });
     widget.onAvatarSelected('assets/images/avatars/$avatarName');
   }
 
+  /// Shows bottom sheet with avatar selection options
   void _showAvatarOptions() {
     showModalBottomSheet(
       context: context,
@@ -84,7 +90,7 @@ class _AvatarSelectorState extends State<AvatarSelector> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Handle bar
+            // Handle bar for visual feedback
             Center(
               child: Container(
                 width: 40,
@@ -103,7 +109,7 @@ class _AvatarSelectorState extends State<AvatarSelector> {
             ),
             const SizedBox(height: 24),
 
-            // Upload Options
+            // Upload options for camera and gallery
             Row(
               children: [
                 Expanded(
@@ -131,13 +137,14 @@ class _AvatarSelectorState extends State<AvatarSelector> {
             ),
             const SizedBox(height: 24),
 
-            // Default Avatars
+            // Default avatar grid
             Text(
               'Or choose a default avatar',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 16),
 
+            // Grid of predefined avatars
             GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -159,6 +166,7 @@ class _AvatarSelectorState extends State<AvatarSelector> {
                   child: Container(
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
+                      // Highlight selected avatar
                       border: Border.all(
                         color: isSelected
                             ? Theme.of(context).colorScheme.primary
@@ -183,6 +191,7 @@ class _AvatarSelectorState extends State<AvatarSelector> {
     );
   }
 
+  /// Builds upload option card for camera/gallery
   Widget _buildUploadOption({
     required IconData icon,
     required String label,
@@ -216,6 +225,7 @@ class _AvatarSelectorState extends State<AvatarSelector> {
       onTap: _showAvatarOptions,
       child: Stack(
         children: [
+          // Main avatar display
           CircleAvatar(
             radius: 60,
             backgroundColor:
@@ -223,6 +233,7 @@ class _AvatarSelectorState extends State<AvatarSelector> {
             backgroundImage: _getAvatarImage(),
             child: _getAvatarChild(),
           ),
+          // Camera icon overlay
           Positioned(
             right: 0,
             bottom: 0,
@@ -248,6 +259,7 @@ class _AvatarSelectorState extends State<AvatarSelector> {
     );
   }
 
+  /// Determines which image to display based on selection state
   ImageProvider? _getAvatarImage() {
     if (_selectedImagePath != null) {
       return FileImage(File(_selectedImagePath!));
@@ -260,6 +272,7 @@ class _AvatarSelectorState extends State<AvatarSelector> {
     return null;
   }
 
+  /// Returns placeholder icon when no avatar is selected
   Widget? _getAvatarChild() {
     if (_selectedImagePath == null &&
         _selectedDefaultAvatar == null &&
