@@ -8,6 +8,8 @@ import 'package:procode/widgets/common/custom_button.dart';
 import 'package:procode/widgets/common/gradient_container.dart';
 import 'package:procode/config/theme.dart';
 
+/// Screen displaying AI-generated personalized learning path
+/// Shows structured course recommendations based on user profile and goals
 class LearningPathScreen extends StatefulWidget {
   const LearningPathScreen({super.key});
 
@@ -28,6 +30,8 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
     _loadLearningPath();
   }
 
+  /// Generate personalized learning path using AI
+  /// Considers user profile, goals, and available courses
   Future<void> _loadLearningPath() async {
     try {
       setState(() {
@@ -48,7 +52,7 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
 
       // Check if user has completed skill assessment
       if (user.skillLevel == null || user.learningStyle == null) {
-        // For now, show a dialog instead of navigating to non-existent screen
+        // Show dialog prompting profile completion
         if (!mounted) return;
 
         await showDialog(
@@ -81,7 +85,7 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
         return;
       }
 
-      // Generate learning path
+      // Generate learning path with AI
       final path = await _geminiService.generateLearningPath(
         userId: user.id,
         skillLevel: user.skillLevel ?? 'beginner',
@@ -124,7 +128,7 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                 )
               : CustomScrollView(
                   slivers: [
-                    // Header
+                    // Header with gradient background
                     SliverAppBar(
                       expandedHeight: 200,
                       pinned: true,
@@ -170,7 +174,7 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
 
                     // Content
                     if (_learningPath != null) ...[
-                      // Overview Card
+                      // Overview Card shows path summary
                       SliverPadding(
                         padding: const EdgeInsets.all(16),
                         sliver: SliverToBoxAdapter(
@@ -217,7 +221,7 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                         ),
                       ),
 
-                      // Phases
+                      // Learning Phases
                       SliverPadding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         sliver: SliverList(
@@ -243,7 +247,7 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                               CustomButton(
                                 text: 'Start Learning',
                                 onPressed: () {
-                                  // Navigate to first course
+                                  // Navigate to dashboard to begin
                                   Navigator.pushReplacementNamed(
                                     context,
                                     '/dashboard',
@@ -273,6 +277,7 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
   }
 }
 
+/// Small info chip displaying key metrics
 class _InfoChip extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -312,6 +317,7 @@ class _InfoChip extends StatelessWidget {
   }
 }
 
+/// Expandable card showing learning phase details
 class _PhaseCard extends StatelessWidget {
   final LearningPhase phase;
   final int phaseNumber;
@@ -355,11 +361,13 @@ class _PhaseCard extends StatelessWidget {
           subtitle:
               Text('${phase.weeks} weeks • ${phase.courses.length} courses'),
           children: [
+            // Phase description
             Text(
               phase.description,
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 16),
+            // Course list for this phase
             ...phase.courses.map((course) => Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Row(
@@ -397,6 +405,7 @@ class _PhaseCard extends StatelessWidget {
                     ],
                   ),
                 )),
+            // Milestones section
             if (phase.milestones.isNotEmpty) ...[
               const SizedBox(height: 16),
               Container(
@@ -423,6 +432,7 @@ class _PhaseCard extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 8),
+                    // List of milestones for this phase
                     ...phase.milestones.map((milestone) => Padding(
                           padding: const EdgeInsets.only(bottom: 4),
                           child: Row(
