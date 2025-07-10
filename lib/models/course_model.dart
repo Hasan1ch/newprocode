@@ -4,25 +4,27 @@ import 'package:flutter/material.dart';
 export 'course_model.dart';
 
 /// Model representing a programming course
+/// Contains all metadata and content structure for a learning path
 class CourseModel {
   final String id;
   final String title;
   final String description;
-  final String language; // python, javascript, html_css, web_dev
-  final String difficulty; // beginner, intermediate, advanced
-  final int estimatedHours;
-  final int moduleCount;
-  final String thumbnailUrl;
-  final List<String> prerequisites;
+  final String
+      language; // Programming language: python, javascript, html_css, web_dev
+  final String difficulty; // Skill level: beginner, intermediate, advanced
+  final int estimatedHours; // Total time to complete course
+  final int moduleCount; // Number of modules/chapters
+  final String thumbnailUrl; // Cover image for course card
+  final List<String> prerequisites; // Required prior knowledge
   final DateTime createdAt;
   final DateTime updatedAt;
-  final String icon;
-  final int enrolledCount;
-  final double rating;
-  final int xpReward;
-  final List<String> tags;
-  final bool isFeatured;
-  final String category;
+  final String icon; // Emoji or icon identifier
+  final int enrolledCount; // Number of enrolled students
+  final double rating; // Average user rating (0-5)
+  final int xpReward; // XP earned on completion
+  final List<String> tags; // Searchable keywords
+  final bool isFeatured; // Highlighted on home screen
+  final String category; // Course classification
 
   CourseModel({
     required this.id,
@@ -45,7 +47,7 @@ class CourseModel {
     this.category = 'General',
   });
 
-  /// Create CourseModel from JSON
+  /// Creates course from Firestore document
   factory CourseModel.fromJson(Map<String, dynamic> json) {
     return CourseModel(
       id: json['id'] ?? '',
@@ -63,7 +65,7 @@ class CourseModel {
       updatedAt: json['updatedAt'] != null
           ? (json['updatedAt'] as Timestamp).toDate()
           : DateTime.now(),
-      icon: json['icon'] ?? '📚',
+      icon: json['icon'] ?? '📚', // Default book emoji
       enrolledCount: json['enrolledCount'] ?? 0,
       rating: (json['rating'] ?? 0.0).toDouble(),
       xpReward: json['xpReward'] ?? 100,
@@ -73,7 +75,7 @@ class CourseModel {
     );
   }
 
-  /// Convert CourseModel to JSON
+  /// Converts course to Firestore document format
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -97,7 +99,7 @@ class CourseModel {
     };
   }
 
-  /// Create a copy with updated fields
+  /// Creates a modified copy of the course
   CourseModel copyWith({
     String? id,
     String? title,
@@ -140,21 +142,22 @@ class CourseModel {
     );
   }
 
-  /// Get difficulty color
+  /// Returns appropriate color for difficulty level
+  /// Used in UI to visually indicate course complexity
   Color getDifficultyColor() {
     switch (difficulty.toLowerCase()) {
       case 'beginner':
-        return const Color(0xFF4CAF50); // Green
+        return const Color(0xFF4CAF50); // Green - easy start
       case 'intermediate':
-        return const Color(0xFFFF9800); // Orange
+        return const Color(0xFFFF9800); // Orange - moderate challenge
       case 'advanced':
-        return const Color(0xFFF44336); // Red
+        return const Color(0xFFF44336); // Red - expert level
       default:
-        return const Color(0xFF9E9E9E); // Grey
+        return const Color(0xFF9E9E9E); // Grey - undefined
     }
   }
 
-  /// Get language display name
+  /// Formats language ID into readable display name
   String getLanguageDisplayName() {
     switch (language) {
       case 'python':
@@ -170,9 +173,10 @@ class CourseModel {
       case 'cpp':
         return 'C++';
       default:
-        return language;
+        return language; // Return as-is if not mapped
     }
   }
 }
 
+// Alias for cleaner code elsewhere
 typedef Course = CourseModel;
