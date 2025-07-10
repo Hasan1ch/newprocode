@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:procode/config/theme.dart';
 
+/// Reusable stats card widget for displaying metrics on the dashboard
+/// Supports loading state with shimmer animation for better UX
 class StatsCard extends StatelessWidget {
-  final String title;
-  final String value;
-  final IconData icon;
-  final Color color;
-  final bool isLoading;
+  final String title; // Metric name (e.g., "Total XP")
+  final String value; // Metric value (e.g., "1250")
+  final IconData icon; // Icon representing the metric
+  final Color color; // Theme color for the card
+  final bool isLoading; // Shows shimmer effect when true
 
   const StatsCard({
     Key? key,
@@ -25,6 +27,7 @@ class StatsCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppTheme.cardColor,
         borderRadius: BorderRadius.circular(16),
+        // Subtle colored border matching the metric type
         border: Border.all(
           color: color.withOpacity(0.3),
           width: 1,
@@ -33,6 +36,7 @@ class StatsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Icon container with colored background
           Container(
             width: 40,
             height: 40,
@@ -47,6 +51,7 @@ class StatsCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
+          // Show shimmer effect while loading
           if (isLoading)
             Shimmer.fromColors(
               baseColor: Colors.grey[700]!,
@@ -61,6 +66,7 @@ class StatsCard extends StatelessWidget {
               ),
             )
           else
+            // Display the actual value
             Text(
               value,
               style: const TextStyle(
@@ -70,6 +76,7 @@ class StatsCard extends StatelessWidget {
               ),
             ),
           const SizedBox(height: 4),
+          // Metric title with loading state
           if (isLoading)
             Shimmer.fromColors(
               baseColor: Colors.grey[700]!,
