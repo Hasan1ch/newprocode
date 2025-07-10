@@ -8,6 +8,8 @@ import 'package:procode/config/theme.dart';
 import 'package:procode/config/app_colors.dart';
 import 'package:procode/utils/app_logger.dart';
 
+/// Debug version of AI Advisor screen with API status monitoring
+/// Used for development to test Gemini AI integration and conversation flow
 class AIAdvisorDebugScreen extends StatefulWidget {
   const AIAdvisorDebugScreen({super.key});
 
@@ -20,15 +22,17 @@ class _AIAdvisorDebugScreenState extends State<AIAdvisorDebugScreen> {
   final ScrollController _scrollController = ScrollController();
   final GeminiService _geminiService = GeminiService();
 
+  // Chat state
   final List<ChatMessage> _messages = [];
   bool _isLoading = false;
   bool _apiConnected = false;
   String? _apiError;
 
-  // Conversation state
+  // Conversation flow state
   int _currentStep = 0;
   Map<String, String> _userResponses = {};
 
+  // Define the conversation steps for personalized learning path
   final List<String> _conversationSteps = [
     'goal',
     'experience',
@@ -43,6 +47,8 @@ class _AIAdvisorDebugScreenState extends State<AIAdvisorDebugScreen> {
     _checkAPIStatus();
   }
 
+  /// Check Gemini API connection status
+  /// Validates API key and tests connection before starting conversation
   Future<void> _checkAPIStatus() async {
     setState(() {
       _isLoading = true;
@@ -82,6 +88,8 @@ class _AIAdvisorDebugScreenState extends State<AIAdvisorDebugScreen> {
     }
   }
 
+  /// Start the AI advisor conversation
+  /// Sends initial greeting and explains the process
   void _startConversation() {
     _addMessage(
       ChatMessage(
@@ -105,6 +113,7 @@ Please tell me about your programming goals and dreams!''',
     );
   }
 
+  /// Add message to chat and scroll to bottom
   void _addMessage(ChatMessage message) {
     setState(() {
       _messages.add(message);
@@ -112,6 +121,7 @@ Please tell me about your programming goals and dreams!''',
     _scrollToBottom();
   }
 
+  /// Auto-scroll to latest message
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
@@ -124,6 +134,8 @@ Please tell me about your programming goals and dreams!''',
     });
   }
 
+  /// Handle user message submission
+  /// Processes user input and generates appropriate AI response
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
@@ -137,7 +149,7 @@ Please tell me about your programming goals and dreams!''',
 
     _messageController.clear();
 
-    // Store user response
+    // Store user response for context
     _userResponses[_conversationSteps[_currentStep]] = text;
 
     setState(() {
@@ -145,7 +157,7 @@ Please tell me about your programming goals and dreams!''',
     });
 
     try {
-      // Get AI response based on current step
+      // Get AI response based on current conversation step
       String aiResponse = await _getAIResponse(text);
 
       _addMessage(ChatMessage(
@@ -172,9 +184,12 @@ Please tell me about your programming goals and dreams!''',
     }
   }
 
+  /// Generate AI response based on conversation step
+  /// Each step has specific prompts to guide the conversation
   Future<String> _getAIResponse(String userInput) async {
     switch (_conversationSteps[_currentStep]) {
       case 'goal':
+        // First step: Understand user's programming goals
         return await _geminiService.getChatResponse(
           message: userInput,
           systemPrompt:
@@ -194,6 +209,7 @@ Keep it short, friendly, and use emojis sparingly. Max 100 words.''',
         );
 
       case 'experience':
+        // Second step: Assess experience level
         return await _geminiService.getChatResponse(
           message: userInput,
           systemPrompt: '''Goal: ${_userResponses['goal']}
@@ -213,6 +229,7 @@ Keep it friendly and under 100 words.''',
         );
 
       case 'time':
+        // Third step: Understand time availability
         return await _geminiService.getChatResponse(
           message: userInput,
           systemPrompt: '''Goal: ${_userResponses['goal']}
@@ -233,6 +250,7 @@ Max 80 words, conversational tone.''',
         );
 
       case 'interests':
+        // Fourth step: Generate personalized recommendations
         return await _geminiService.getChatResponse(
           message: userInput,
           systemPrompt: '''Based on the conversation:
@@ -278,6 +296,7 @@ Keep the language friendly, encouraging, and easy to read. NO TABLES.''',
         );
 
       case 'recommendations':
+        // Follow-up: Handle questions about recommendations
         return await _geminiService.getChatResponse(
           message: userInput,
           systemPrompt: '''The user is responding to your recommendations. 
@@ -321,7 +340,7 @@ Keep response conversational and under 150 words.''',
       ),
       body: Column(
         children: [
-          // API Status Bar
+          // API Status Bar - Shows connection status for debugging
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(12),
@@ -364,7 +383,7 @@ Keep response conversational and under 150 words.''',
             ),
           ),
 
-          // Progress Indicator
+          // Progress Indicator - Shows conversation progress
           if (_currentStep < _conversationSteps.length - 1 && _apiConnected)
             Container(
               padding: const EdgeInsets.all(16),
@@ -499,6 +518,7 @@ Keep response conversational and under 150 words.''',
     );
   }
 
+  /// Build message bubble for chat display
   Widget _buildMessageBubble(ChatMessage message) {
     final theme = Theme.of(context);
     final isUser = message.isUser;
@@ -562,6 +582,7 @@ Keep response conversational and under 150 words.''',
     );
   }
 
+  /// Build loading indicator for AI response
   Widget _buildLoadingIndicator() {
     final theme = Theme.of(context);
 
@@ -619,6 +640,7 @@ Keep response conversational and under 150 words.''',
     );
   }
 
+  /// Get human-readable step name
   String _getStepName(int step) {
     switch (step) {
       case 0:
@@ -642,6 +664,7 @@ Keep response conversational and under 150 words.''',
   }
 }
 
+/// Simple chat message model
 class ChatMessage {
   final String text;
   final bool isUser;
