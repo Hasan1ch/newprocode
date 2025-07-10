@@ -1,19 +1,26 @@
 import 'package:flutter/material.dart';
 
-// String Extensions
+/// Extension methods add functionality to existing Dart classes
+/// This file contains utility extensions that make common operations more concise
+/// Using extensions improves code readability throughout the app
+
+// String Extensions - Common string manipulations
 extension StringExtensions on String {
-  // Capitalize first letter
+  /// Capitalizes the first letter of a string
+  /// Used for formatting user names and titles
   String get capitalize {
     if (isEmpty) return this;
     return '${this[0].toUpperCase()}${substring(1)}';
   }
 
-  // Capitalize each word
+  /// Capitalizes each word in a string
+  /// Perfect for formatting course titles and display names
   String get capitalizeWords {
     return split(' ').map((word) => word.capitalize).join(' ');
   }
 
-  // Convert to title case
+  /// Converts camelCase or PascalCase to readable title case
+  /// Useful for displaying enum values in the UI
   String get toTitleCase {
     return replaceAllMapped(
       RegExp(
@@ -24,7 +31,8 @@ extension StringExtensions on String {
     ).trim();
   }
 
-  // Check if string is email
+  /// Email validation using RFC-compliant regex
+  /// Critical for user registration and profile updates
   bool get isEmail {
     final emailRegex = RegExp(
       r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
@@ -32,7 +40,8 @@ extension StringExtensions on String {
     return emailRegex.hasMatch(this);
   }
 
-  // Check if string is URL
+  /// URL validation for link inputs
+  /// Used in course resources and external links
   bool get isURL {
     final urlRegex = RegExp(
       r'^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$',
@@ -40,39 +49,46 @@ extension StringExtensions on String {
     return urlRegex.hasMatch(this);
   }
 
-  // Check if string is phone number
+  /// Phone number validation with international format support
+  /// Used in user profiles for contact information
   bool get isPhoneNumber {
     final phoneRegex = RegExp(r'^\+?[\d\s\-\(\)]+$');
     return phoneRegex.hasMatch(this) && length >= 10;
   }
 
-  // Check if string contains only numbers
+  /// Checks if string contains only numbers
+  /// Useful for OTP and verification code inputs
   bool get isNumeric {
     return RegExp(r'^[0-9]+$').hasMatch(this);
   }
 
-  // Check if string contains only alphabets
+  /// Checks if string contains only letters
+  /// Used for name validation
   bool get isAlpha {
     return RegExp(r'^[a-zA-Z]+$').hasMatch(this);
   }
 
-  // Check if string contains only alphanumeric characters
+  /// Checks if string contains only letters and numbers
+  /// Used for username validation
   bool get isAlphanumeric {
     return RegExp(r'^[a-zA-Z0-9]+$').hasMatch(this);
   }
 
-  // Remove all whitespace
+  /// Removes all whitespace from string
+  /// Useful for comparing user inputs
   String get removeAllWhitespace {
     return replaceAll(RegExp(r'\s+'), '');
   }
 
-  // Truncate string with ellipsis
+  /// Truncates long strings with ellipsis
+  /// Essential for UI text that might overflow
   String truncate(int maxLength, {String suffix = '...'}) {
     if (length <= maxLength) return this;
     return '${substring(0, maxLength - suffix.length)}$suffix';
   }
 
-  // Convert to slug (URL-friendly)
+  /// Converts string to URL-friendly slug
+  /// Used for creating shareable course links
   String get toSlug {
     return toLowerCase()
         .replaceAll(RegExp(r'\s+'), '-')
@@ -81,33 +97,37 @@ extension StringExtensions on String {
         .replaceAll(RegExp(r'^\-|\-$'), '');
   }
 
-  // Check if string is null or empty
+  /// Quick empty check
   bool get isNullOrEmpty {
     return isEmpty;
   }
 
-  // Check if string is not null or empty
+  /// Quick non-empty check
   bool get isNotNullOrEmpty {
     return isNotEmpty;
   }
 
-  // Reverse string
+  /// Reverses string characters
+  /// Used in some gamification animations
   String get reverse {
     return split('').reversed.join('');
   }
 
-  // Count words
+  /// Counts words in string
+  /// Used for lesson content statistics
   int get wordCount {
     return trim().isEmpty ? 0 : trim().split(RegExp(r'\s+')).length;
   }
 
-  // Get file extension
+  /// Extracts file extension from filename
+  /// Used in code editor for syntax highlighting
   String get fileExtension {
     final parts = split('.');
     return parts.length > 1 ? parts.last : '';
   }
 
-  // Get file name without extension
+  /// Gets filename without extension
+  /// Used for display purposes
   String get fileNameWithoutExtension {
     final parts = split('.');
     if (parts.length > 1) {
@@ -118,15 +138,17 @@ extension StringExtensions on String {
   }
 }
 
-// DateTime Extensions
+// DateTime Extensions - Date/time formatting and comparisons
 extension DateTimeExtensions on DateTime {
-  // Check if date is today
+  /// Checks if date is today
+  /// Used for streak tracking and daily challenges
   bool get isToday {
     final now = DateTime.now();
     return year == now.year && month == now.month && day == now.day;
   }
 
-  // Check if date is yesterday
+  /// Checks if date is yesterday
+  /// Used for streak calculations
   bool get isYesterday {
     final yesterday = DateTime.now().subtract(const Duration(days: 1));
     return year == yesterday.year &&
@@ -134,7 +156,8 @@ extension DateTimeExtensions on DateTime {
         day == yesterday.day;
   }
 
-  // Check if date is tomorrow
+  /// Checks if date is tomorrow
+  /// Used for scheduling notifications
   bool get isTomorrow {
     final tomorrow = DateTime.now().add(const Duration(days: 1));
     return year == tomorrow.year &&
@@ -142,17 +165,18 @@ extension DateTimeExtensions on DateTime {
         day == tomorrow.day;
   }
 
-  // Check if date is in the past
+  /// Checks if timestamp is in the past
   bool get isPast {
     return isBefore(DateTime.now());
   }
 
-  // Check if date is in the future
+  /// Checks if timestamp is in the future
   bool get isFuture {
     return isAfter(DateTime.now());
   }
 
-  // Get time ago
+  /// Generates human-readable relative time strings
+  /// Creates friendly timestamps like "2 hours ago"
   String get timeAgo {
     final now = DateTime.now();
     final difference = now.difference(this);
@@ -177,44 +201,49 @@ extension DateTimeExtensions on DateTime {
     }
   }
 
-  // Get start of day
+  /// Gets midnight of current date
+  /// Used for daily reset calculations
   DateTime get startOfDay {
     return DateTime(year, month, day);
   }
 
-  // Get end of day
+  /// Gets last moment of current date
+  /// Used for date range queries
   DateTime get endOfDay {
     return DateTime(year, month, day, 23, 59, 59, 999);
   }
 
-  // Get start of week (Monday)
+  /// Gets Monday of current week
+  /// Used for weekly statistics
   DateTime get startOfWeek {
     final daysToSubtract = weekday - 1;
     return subtract(Duration(days: daysToSubtract)).startOfDay;
   }
 
-  // Get end of week (Sunday)
+  /// Gets Sunday of current week
   DateTime get endOfWeek {
     final daysToAdd = 7 - weekday;
     return add(Duration(days: daysToAdd)).endOfDay;
   }
 
-  // Get start of month
+  /// Gets first day of current month
   DateTime get startOfMonth {
     return DateTime(year, month);
   }
 
-  // Get end of month
+  /// Gets last day of current month
   DateTime get endOfMonth {
     return DateTime(year, month + 1, 0, 23, 59, 59, 999);
   }
 
-  // Check if same day
+  /// Compares dates ignoring time
+  /// Used for streak calculations
   bool isSameDay(DateTime other) {
     return year == other.year && month == other.month && day == other.day;
   }
 
-  // Format to readable date
+  /// Formats date in readable format
+  /// Example: "January 15, 2024"
   String get readableDate {
     final months = [
       'January',
@@ -233,7 +262,8 @@ extension DateTimeExtensions on DateTime {
     return '${months[month - 1]} $day, $year';
   }
 
-  // Format to readable time
+  /// Formats time in 12-hour format
+  /// Example: "3:45 PM"
   String get readableTime {
     final hour12 = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
     final period = hour >= 12 ? 'PM' : 'AM';
@@ -242,24 +272,27 @@ extension DateTimeExtensions on DateTime {
   }
 }
 
-// List Extensions
+// List Extensions - Collection utilities
 extension ListExtensions<T> on List<T> {
-  // Get first or null
+  /// Safe first element access
+  /// Returns null instead of throwing if list is empty
   T? get firstOrNull {
     return isEmpty ? null : first;
   }
 
-  // Get last or null
+  /// Safe last element access
   T? get lastOrNull {
     return isEmpty ? null : last;
   }
 
-  // Get element at index or null
+  /// Safe index access
+  /// Prevents index out of bounds errors
   T? getOrNull(int index) {
     return (index >= 0 && index < length) ? this[index] : null;
   }
 
-  // Chunk list into smaller lists
+  /// Splits list into smaller chunks
+  /// Used for pagination in course lists
   List<List<T>> chunk(int chunkSize) {
     final chunks = <List<T>>[];
     for (var i = 0; i < length; i += chunkSize) {
@@ -268,12 +301,13 @@ extension ListExtensions<T> on List<T> {
     return chunks;
   }
 
-  // Remove duplicates
+  /// Removes duplicate elements while preserving order
   List<T> get removeDuplicates {
     return toSet().toList();
   }
 
-  // Shuffle and return new list
+  /// Creates shuffled copy without modifying original
+  /// Used for randomizing quiz questions
   List<T> shuffled() {
     final shuffledList = List<T>.from(this);
     shuffledList.shuffle();
@@ -281,16 +315,17 @@ extension ListExtensions<T> on List<T> {
   }
 }
 
-// int Extensions
+// int Extensions - Number formatting and conversions
 extension IntExtensions on int {
-  // Convert to duration
+  /// Quick duration creators for animations and delays
   Duration get milliseconds => Duration(milliseconds: this);
   Duration get seconds => Duration(seconds: this);
   Duration get minutes => Duration(minutes: this);
   Duration get hours => Duration(hours: this);
   Duration get days => Duration(days: this);
 
-  // Convert to formatted string with commas
+  /// Formats numbers with thousands separators
+  /// Example: 1234567 becomes "1,234,567"
   String get formatted {
     return toString().replaceAllMapped(
       RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
@@ -298,13 +333,12 @@ extension IntExtensions on int {
     );
   }
 
-  // Check if even
+  /// Mathematical helpers
   bool get isEven => this % 2 == 0;
-
-  // Check if odd
   bool get isOdd => this % 2 != 0;
 
-  // Convert to ordinal (1st, 2nd, 3rd, etc.)
+  /// Converts number to ordinal string
+  /// Used for rankings: 1st, 2nd, 3rd, etc.
   String get ordinal {
     if (this >= 11 && this <= 13) {
       return '${this}th';
@@ -322,56 +356,49 @@ extension IntExtensions on int {
   }
 }
 
-// double Extensions
+// double Extensions - Decimal operations
 extension DoubleExtensions on double {
-  // Round to decimal places
+  /// Rounds to specified decimal places
+  /// Used for displaying scores and percentages
   double roundToDecimals(int decimals) {
     final factor = pow(10, decimals).toDouble();
     return (this * factor).round() / factor;
   }
 
-  // Convert to percentage string
+  /// Converts decimal to percentage string
+  /// Example: 0.856 becomes "85.6%"
   String toPercentage({int decimals = 0}) {
     return '${(this * 100).toStringAsFixed(decimals)}%';
   }
 
-  // Check if whole number
+  /// Checks if double represents a whole number
   bool get isWhole => this == roundToDouble();
 }
 
-// Context Extensions
+// Context Extensions - Flutter UI helpers
 extension ContextExtensions on BuildContext {
-  // Get theme
+  /// Quick theme access shortcuts
   ThemeData get theme => Theme.of(this);
-
-  // Get text theme
   TextTheme get textTheme => Theme.of(this).textTheme;
-
-  // Get color scheme
   ColorScheme get colorScheme => Theme.of(this).colorScheme;
 
-  // Get media query
+  /// Media query shortcuts for responsive design
   MediaQueryData get mediaQuery => MediaQuery.of(this);
-
-  // Get screen size
   Size get screenSize => MediaQuery.of(this).size;
-
-  // Get screen width
   double get screenWidth => MediaQuery.of(this).size.width;
-
-  // Get screen height
   double get screenHeight => MediaQuery.of(this).size.height;
 
-  // Check if dark mode
+  /// Theme mode detection
   bool get isDarkMode => Theme.of(this).brightness == Brightness.dark;
 
-  // Check if keyboard is visible
+  /// Keyboard visibility check
+  /// Used to adjust UI when keyboard appears
   bool get isKeyboardVisible => MediaQuery.of(this).viewInsets.bottom > 0;
 
-  // Get safe area padding
+  /// Safe area padding for notched devices
   EdgeInsets get safeAreaPadding => MediaQuery.of(this).padding;
 
-  // Navigation helpers
+  /// Navigation shortcuts - reduces boilerplate code
   void pop<T>([T? result]) => Navigator.of(this).pop(result);
 
   Future<T?> push<T>(Widget page) => Navigator.of(this).push<T>(
@@ -394,7 +421,8 @@ extension ContextExtensions on BuildContext {
       Navigator.of(this).popUntil(ModalRoute.withName(routeName));
 }
 
-// pow function for double extension
+/// Simple power function for extension use
+/// Avoids importing dart:math for basic operations
 double pow(num x, num exponent) {
   if (exponent == 0) return 1;
   if (exponent == 1) return x.toDouble();
