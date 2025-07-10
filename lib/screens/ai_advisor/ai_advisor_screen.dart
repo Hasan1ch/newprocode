@@ -9,6 +9,8 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+/// Production AI Advisor screen for personalized learning path generation
+/// Guides users through a conversation to understand their goals and create recommendations
 class AIAdvisorScreen extends StatefulWidget {
   const AIAdvisorScreen({super.key});
 
@@ -21,13 +23,15 @@ class _AIAdvisorScreenState extends State<AIAdvisorScreen> {
   final ScrollController _scrollController = ScrollController();
   final GeminiService _geminiService = GeminiService();
 
+  // Chat state
   final List<ChatMessage> _messages = [];
   bool _isLoading = false;
 
-  // Conversation state
+  // Conversation flow state
   int _currentStep = 0;
   Map<String, String> _userResponses = {};
 
+  // Define conversation steps for structured learning path creation
   final List<String> _conversationSteps = [
     'goal',
     'experience',
@@ -42,6 +46,7 @@ class _AIAdvisorScreenState extends State<AIAdvisorScreen> {
     _startConversation();
   }
 
+  /// Initialize conversation with friendly greeting
   void _startConversation() {
     _addMessage(
       ChatMessage(
@@ -65,6 +70,7 @@ Please tell me about your programming goals and dreams!''',
     );
   }
 
+  /// Add message to chat and auto-scroll
   void _addMessage(ChatMessage message) {
     setState(() {
       _messages.add(message);
@@ -72,6 +78,7 @@ Please tell me about your programming goals and dreams!''',
     _scrollToBottom();
   }
 
+  /// Smooth scroll to latest message
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
@@ -84,6 +91,7 @@ Please tell me about your programming goals and dreams!''',
     });
   }
 
+  /// Process user input and generate AI response
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
@@ -97,7 +105,7 @@ Please tell me about your programming goals and dreams!''',
 
     _messageController.clear();
 
-    // Store user response
+    // Store user response for context
     _userResponses[_conversationSteps[_currentStep]] = text;
 
     setState(() {
@@ -114,7 +122,7 @@ Please tell me about your programming goals and dreams!''',
         timestamp: DateTime.now(),
       ));
 
-      // Move to next step if not at recommendations
+      // Progress to next step if not at final recommendations
       if (_currentStep < _conversationSteps.length - 1) {
         _currentStep++;
       }
@@ -131,9 +139,11 @@ Please tell me about your programming goals and dreams!''',
     }
   }
 
+  /// Generate context-aware AI responses based on conversation step
   Future<String> _getAIResponse(String userInput) async {
     switch (_conversationSteps[_currentStep]) {
       case 'goal':
+        // Step 1: Understand programming goals
         return await _geminiService.getChatResponse(
           message: userInput,
           systemPrompt:
@@ -150,6 +160,7 @@ Keep it conversational and encouraging.''',
         );
 
       case 'experience':
+        // Step 2: Assess current skill level
         return await _geminiService.getChatResponse(
           message: userInput,
           systemPrompt: '''The user's goal is: ${_userResponses['goal']}
@@ -164,6 +175,7 @@ Be encouraging and realistic about time expectations.''',
         );
 
       case 'time':
+        // Step 3: Understand time availability
         return await _geminiService.getChatResponse(
           message: userInput,
           systemPrompt: '''User's goal: ${_userResponses['goal']}
@@ -180,6 +192,7 @@ Keep it friendly and show genuine interest.''',
         );
 
       case 'interests':
+        // Step 4: Generate personalized learning path
         return await _geminiService.getChatResponse(
           message: userInput,
           systemPrompt: '''Based on the conversation:
@@ -217,6 +230,7 @@ Be detailed, encouraging, and specific to their situation. Format with clear sec
         );
 
       case 'recommendations':
+        // Follow-up: Handle questions about recommendations
         return await _geminiService.getChatResponse(
           message: userInput,
           systemPrompt: '''The user is responding to your recommendations. 
@@ -236,6 +250,8 @@ Be helpful and offer to adjust recommendations if needed. Always be encouraging 
     }
   }
 
+  /// Save conversation to file and share
+  /// Allows users to keep their personalized learning path
   Future<void> _saveConversation() async {
     try {
       final StringBuffer content = StringBuffer();
@@ -245,6 +261,7 @@ Be helpful and offer to adjust recommendations if needed. Always be encouraging 
       content.writeln('=' * 50);
       content.writeln();
 
+      // Format conversation for readability
       for (var message in _messages) {
         content.writeln(message.isUser ? 'You:' : 'AI Advisor:');
         content.writeln(message.text);
@@ -255,6 +272,7 @@ Be helpful and offer to adjust recommendations if needed. Always be encouraging 
       content
           .writeln('Saved from ProCode - Your AI-Powered Learning Companion');
 
+      // Save to temporary file
       final directory = await getApplicationDocumentsDirectory();
       final fileName =
           'procode_ai_conversation_${DateTime.now().millisecondsSinceEpoch}.txt';
@@ -262,6 +280,7 @@ Be helpful and offer to adjust recommendations if needed. Always be encouraging 
 
       await file.writeAsString(content.toString());
 
+      // Share using system share sheet
       await Share.shareXFiles(
         [XFile(file.path)],
         subject: 'ProCode AI Learning Path',
@@ -288,6 +307,7 @@ Be helpful and offer to adjust recommendations if needed. Always be encouraging 
     }
   }
 
+  /// Reset conversation to start over
   void _resetConversation() {
     setState(() {
       _messages.clear();
@@ -309,6 +329,7 @@ Be helpful and offer to adjust recommendations if needed. Always be encouraging 
         backgroundColor: theme.colorScheme.surface,
         elevation: 0,
         actions: [
+          // Save button appears after meaningful conversation
           if (_messages.length > 2)
             IconButton(
               icon: const Icon(Icons.save_alt),
@@ -324,7 +345,7 @@ Be helpful and offer to adjust recommendations if needed. Always be encouraging 
       ),
       body: Column(
         children: [
-          // Progress Indicator
+          // Progress Indicator shows conversation flow
           if (_currentStep < _conversationSteps.length - 1)
             Container(
               padding: const EdgeInsets.all(16),
@@ -456,6 +477,7 @@ Be helpful and offer to adjust recommendations if needed. Always be encouraging 
     );
   }
 
+  /// Build individual message bubble
   Widget _buildMessageBubble(ChatMessage message) {
     final theme = Theme.of(context);
     final isUser = message.isUser;
@@ -519,6 +541,7 @@ Be helpful and offer to adjust recommendations if needed. Always be encouraging 
     );
   }
 
+  /// Build loading indicator while AI generates response
   Widget _buildLoadingIndicator() {
     final theme = Theme.of(context);
 
@@ -576,6 +599,7 @@ Be helpful and offer to adjust recommendations if needed. Always be encouraging 
     );
   }
 
+  /// Get human-readable step name for progress indicator
   String _getStepName(int step) {
     switch (step) {
       case 0:
@@ -599,6 +623,7 @@ Be helpful and offer to adjust recommendations if needed. Always be encouraging 
   }
 }
 
+/// Chat message model for conversation
 class ChatMessage {
   final String text;
   final bool isUser;
