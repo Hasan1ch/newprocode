@@ -9,6 +9,8 @@ import 'package:procode/config/routes.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:procode/config/app_colors.dart';
 
+/// Login screen with email/password and Google authentication
+/// Includes remember me functionality and password recovery
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
 
@@ -22,9 +24,11 @@ class _LoginScreenState extends State<LoginScreen>
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
+  // UI state
   bool _rememberMe = false;
   bool _isPasswordVisible = false;
 
+  // Animation controllers
   late AnimationController _fadeController;
   late AnimationController _slideController;
   late Animation<double> _fadeAnimation;
@@ -37,6 +41,7 @@ class _LoginScreenState extends State<LoginScreen>
     _loadSavedEmail();
   }
 
+  /// Initialize animations for smooth screen transitions
   void _initializeAnimations() {
     _fadeController = AnimationController(
       duration: const Duration(milliseconds: 800),
@@ -65,6 +70,7 @@ class _LoginScreenState extends State<LoginScreen>
     _slideController.forward();
   }
 
+  /// Load saved email if remember me was previously checked
   Future<void> _loadSavedEmail() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     String? savedEmail = await authProvider.getSavedEmail();
@@ -86,6 +92,8 @@ class _LoginScreenState extends State<LoginScreen>
     super.dispose();
   }
 
+  /// Handle email/password login
+  /// Validates form and navigates based on email verification status
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -108,6 +116,8 @@ class _LoginScreenState extends State<LoginScreen>
     }
   }
 
+  /// Handle Google sign in
+  /// Creates account if new user or logs in existing user
   Future<void> _handleGoogleSignIn() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
@@ -120,6 +130,7 @@ class _LoginScreenState extends State<LoginScreen>
     }
   }
 
+  /// Display error message to user
   void _showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -198,7 +209,7 @@ class _LoginScreenState extends State<LoginScreen>
 
                         const SizedBox(height: 32),
 
-                        // Login Button
+                        // Login Button with loading state
                         Consumer<AuthProvider>(
                           builder: (context, authProvider, _) {
                             return CustomButton(
@@ -237,6 +248,7 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
+  /// Build header with logo and welcome text
   Widget _buildHeader() {
     return Column(
       children: [
@@ -279,6 +291,7 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
+  /// Build remember me checkbox and forgot password link
   Widget _buildOptions() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -329,6 +342,7 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
+  /// Build divider with "OR" text
   Widget _buildDivider() {
     return Row(
       children: [
@@ -357,6 +371,7 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
+  /// Build Google sign in button
   Widget _buildSocialLogin() {
     return CustomButton(
       text: 'Continue with Google',
@@ -371,6 +386,7 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
+  /// Build sign up link for new users
   Widget _buildSignUpLink() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
