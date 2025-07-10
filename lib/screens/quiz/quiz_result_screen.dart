@@ -10,6 +10,8 @@ import 'package:procode/widgets/common/custom_button.dart';
 import 'package:procode/config/app_colors.dart';
 import 'package:confetti/confetti.dart';
 
+/// Quiz result screen that displays score, XP earned, and wrong answer review
+/// Features animated score reveal and confetti for high scores
 class QuizResultScreen extends StatefulWidget {
   const QuizResultScreen({super.key});
 
@@ -31,6 +33,7 @@ class _QuizResultScreenState extends State<QuizResultScreen>
   void initState() {
     super.initState();
 
+    // Initialize animation controllers
     _scoreController = AnimationController(
       duration: const Duration(seconds: 2),
       vsync: this,
@@ -47,12 +50,13 @@ class _QuizResultScreenState extends State<QuizResultScreen>
 
     final quizResult = context.read<QuizProvider>().lastResult!;
 
-    // Calculate score percentage
+    // Calculate score percentage for animation
     final totalQuestions = quizResult.totalQuestions;
     final scorePercentage = totalQuestions > 0
         ? (quizResult.correctAnswers / totalQuestions * 100).round()
         : 0;
 
+    // Score animation with bounce effect
     _scoreAnimation = Tween<double>(
       begin: 0,
       end: scorePercentage.toDouble(),
@@ -61,6 +65,7 @@ class _QuizResultScreenState extends State<QuizResultScreen>
       curve: Curves.easeOutBack,
     ));
 
+    // XP animation with elastic effect
     _xpAnimation = Tween<double>(
       begin: 0,
       end: quizResult.xpEarned.toDouble(),
@@ -72,6 +77,7 @@ class _QuizResultScreenState extends State<QuizResultScreen>
     _startAnimations();
   }
 
+  /// Triggers animations in sequence for dramatic effect
   void _startAnimations() async {
     await Future.delayed(const Duration(milliseconds: 500));
     _scoreController.forward();
@@ -85,6 +91,7 @@ class _QuizResultScreenState extends State<QuizResultScreen>
         ? (result.correctAnswers / totalQuestions * 100).round()
         : 0;
 
+    // Trigger confetti for scores 70% and above
     if (scorePercentage >= 70) {
       _confettiController.play();
     }
@@ -98,7 +105,7 @@ class _QuizResultScreenState extends State<QuizResultScreen>
     super.dispose();
   }
 
-  // Calculate incorrect answers from total and correct
+  /// Calculate incorrect answers from total and correct
   int _getIncorrectAnswers(QuizResultModel result) {
     return result.totalQuestions - result.correctAnswers;
   }
@@ -124,9 +131,10 @@ class _QuizResultScreenState extends State<QuizResultScreen>
     final textColor = isDark ? AppColors.textLight : AppColors.textDark;
 
     return PopScope(
-      canPop: false,
+      canPop: false, // Prevent accidental back navigation
       onPopInvoked: (didPop) {
         if (!didPop) {
+          // Navigate to quiz categories, clearing the stack
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(
@@ -146,7 +154,7 @@ class _QuizResultScreenState extends State<QuizResultScreen>
                   padding: const EdgeInsets.all(24),
                   child: Column(
                     children: [
-                      // Score Section
+                      // Score Section with animated percentage
                       FadeAnimation(
                         child: AnimatedBuilder(
                           animation: _scoreAnimation,
@@ -162,6 +170,7 @@ class _QuizResultScreenState extends State<QuizResultScreen>
                                   ),
                                 ),
                                 const SizedBox(height: 24),
+                                // Pie chart with score in center
                                 SizedBox(
                                   width: 200,
                                   height: 200,
@@ -206,7 +215,7 @@ class _QuizResultScreenState extends State<QuizResultScreen>
                       ),
                       const SizedBox(height: 32),
 
-                      // Stats Row
+                      // Statistics row showing correct, wrong, and time
                       SlideAnimation(
                         delay: 0.5,
                         child: Row(
@@ -235,7 +244,7 @@ class _QuizResultScreenState extends State<QuizResultScreen>
                       ),
                       const SizedBox(height: 24),
 
-                      // XP Earned
+                      // XP Earned animation
                       SlideAnimation(
                         delay: 0.7,
                         child: AnimatedBuilder(
@@ -276,7 +285,7 @@ class _QuizResultScreenState extends State<QuizResultScreen>
                         ),
                       ),
 
-                      // Motivational Message
+                      // Motivational Message based on score
                       const SizedBox(height: 24),
                       SlideAnimation(
                         delay: 0.9,
@@ -299,7 +308,7 @@ class _QuizResultScreenState extends State<QuizResultScreen>
                         ),
                       ),
 
-                      // Wrong Answers Review
+                      // Wrong Answers Review section (expandable)
                       if (_getIncorrectAnswers(result) > 0) ...[
                         const SizedBox(height: 24),
                         SlideAnimation(
@@ -332,6 +341,7 @@ class _QuizResultScreenState extends State<QuizResultScreen>
                             ),
                           ),
                         ),
+                        // Wrong answer details with AI explanations
                         if (_showDetails) ...[
                           const SizedBox(height: 16),
                           ...List.generate(
@@ -344,6 +354,7 @@ class _QuizResultScreenState extends State<QuizResultScreen>
                               final isWrong =
                                   userAnswer != question.correctAnswer;
 
+                              // Only show wrong answers
                               if (!isWrong) return const SizedBox.shrink();
 
                               return FadeAnimation(
@@ -391,6 +402,7 @@ class _QuizResultScreenState extends State<QuizResultScreen>
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
                                           children: [
+                                            // User's wrong answer
                                             Row(
                                               children: [
                                                 Icon(
@@ -411,6 +423,7 @@ class _QuizResultScreenState extends State<QuizResultScreen>
                                               ],
                                             ),
                                             const SizedBox(height: 8),
+                                            // Correct answer
                                             Row(
                                               children: [
                                                 Icon(
@@ -430,6 +443,7 @@ class _QuizResultScreenState extends State<QuizResultScreen>
                                                 ),
                                               ],
                                             ),
+                                            // AI explanation if available
                                             if (quizProvider
                                                         .wrongAnswerExplanations[
                                                     index] !=
@@ -505,6 +519,7 @@ class _QuizResultScreenState extends State<QuizResultScreen>
                         child: PrimaryButton(
                           text: 'Continue Learning',
                           onPressed: () {
+                            // Navigate back to quiz categories
                             Navigator.pushAndRemoveUntil(
                               context,
                               MaterialPageRoute(
@@ -522,7 +537,7 @@ class _QuizResultScreenState extends State<QuizResultScreen>
                         direction: SlideDirection.up,
                         child: TextButton(
                           onPressed: () {
-                            // Share result functionality
+                            // Share result functionality (to be implemented)
                           },
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -549,7 +564,7 @@ class _QuizResultScreenState extends State<QuizResultScreen>
               ),
             ),
 
-            // Confetti
+            // Confetti overlay for celebration
             Align(
               alignment: Alignment.topCenter,
               child: ConfettiWidget(
@@ -572,6 +587,7 @@ class _QuizResultScreenState extends State<QuizResultScreen>
     );
   }
 
+  /// Builds a statistic card with icon and value
   Widget _buildStatCard(
       String label, String value, Color color, IconData icon) {
     return Container(
@@ -609,6 +625,7 @@ class _QuizResultScreenState extends State<QuizResultScreen>
     );
   }
 
+  /// Returns color based on score percentage
   Color _getScoreColor(int score) {
     if (score >= 90) return AppColors.success;
     if (score >= 70) return AppColors.warning;
@@ -616,12 +633,14 @@ class _QuizResultScreenState extends State<QuizResultScreen>
     return AppColors.error;
   }
 
+  /// Formats seconds into minutes and seconds display
   String _formatTime(int seconds) {
     final minutes = seconds ~/ 60;
     final remainingSeconds = seconds % 60;
     return '${minutes}m ${remainingSeconds}s';
   }
 
+  /// Returns motivational message based on score percentage
   String _getMotivationalMessage(QuizResultModel result) {
     final percentage = result.percentage;
 
