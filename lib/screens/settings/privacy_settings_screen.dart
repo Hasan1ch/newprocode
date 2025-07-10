@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:procode/providers/user_provider.dart';
 import 'package:procode/widgets/common/loading_widget.dart';
 
+/// Privacy settings screen for controlling what information is visible to others
+/// Allows users to manage their privacy preferences for profile and leaderboard
 class PrivacySettingsScreen extends StatefulWidget {
   const PrivacySettingsScreen({Key? key}) : super(key: key);
 
@@ -11,6 +13,7 @@ class PrivacySettingsScreen extends StatefulWidget {
 }
 
 class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
+  // Privacy preference flags
   late bool _showEmail;
   late bool _showProgress;
   late bool _showOnLeaderboard;
@@ -19,13 +22,16 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
   @override
   void initState() {
     super.initState();
+    // Load current privacy settings from user data
     _loadSettings();
   }
 
+  /// Loads privacy settings from the current user's profile
   void _loadSettings() {
     final user = context.read<UserProvider>().user;
     if (user != null) {
       setState(() {
+        // Load each setting with default values if not set
         _showEmail = user.privacySettings['showEmail'] ?? false;
         _showProgress = user.privacySettings['showProgress'] ?? true;
         _showOnLeaderboard = user.privacySettings['showOnLeaderboard'] ?? true;
@@ -33,10 +39,12 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
     }
   }
 
+  /// Saves privacy settings to Firebase through UserProvider
   Future<void> _saveSettings() async {
     setState(() => _isLoading = true);
 
     try {
+      // Update privacy settings in Firebase
       await context.read<UserProvider>().updatePrivacySettings(
             showEmail: _showEmail,
             showProgress: _showProgress,
@@ -44,11 +52,13 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
           );
 
       if (mounted) {
+        // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Privacy settings updated')),
         );
       }
     } catch (e) {
+      // Show error message if update fails
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: $e')),
       );
@@ -71,7 +81,7 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                // Profile Visibility
+                // Profile Visibility section
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
@@ -83,6 +93,7 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
                           style: Theme.of(context).textTheme.titleLarge,
                         ),
                         const SizedBox(height: 16),
+                        // Email visibility toggle
                         SwitchListTile(
                           title: const Text('Show Email'),
                           subtitle: const Text(
@@ -94,6 +105,7 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
                           },
                         ),
                         const Divider(),
+                        // Progress visibility toggle
                         SwitchListTile(
                           title: const Text('Show Progress'),
                           subtitle: const Text(
@@ -110,7 +122,7 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Leaderboard Settings
+                // Leaderboard Settings section
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
@@ -122,6 +134,7 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
                           style: Theme.of(context).textTheme.titleLarge,
                         ),
                         const SizedBox(height: 16),
+                        // Leaderboard visibility toggle
                         SwitchListTile(
                           title: const Text('Appear on Leaderboard'),
                           subtitle: const Text(
@@ -138,7 +151,7 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Privacy Information
+                // Privacy Information card - explains data handling
                 Card(
                   color: Theme.of(context).colorScheme.surfaceVariant,
                   child: Padding(
@@ -165,6 +178,7 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
                           ],
                         ),
                         const SizedBox(height: 12),
+                        // Key privacy points
                         const Text(
                           '• Your learning data is always private\n'
                           '• Only the information you choose is shared\n'
