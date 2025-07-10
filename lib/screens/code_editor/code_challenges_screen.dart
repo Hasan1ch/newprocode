@@ -6,6 +6,8 @@ import 'package:procode/services/code_editor_service.dart';
 import 'package:procode/widgets/animations/fade_animation.dart';
 import 'package:procode/widgets/common/loading_widget.dart';
 
+/// Screen displaying available coding challenges
+/// Allows filtering by language, difficulty, and category
 class CodeChallengesScreen extends StatefulWidget {
   const CodeChallengesScreen({super.key});
 
@@ -16,12 +18,14 @@ class CodeChallengesScreen extends StatefulWidget {
 class _CodeChallengesScreenState extends State<CodeChallengesScreen> {
   final CodeEditorService _codeService = CodeEditorService();
 
+  // Filter state
   String _selectedLanguage = 'All';
   String _selectedDifficulty = 'All';
   String _selectedCategory = 'All';
   List<CodeChallengeModel> _challenges = [];
   bool _isLoading = true;
 
+  // Filter options
   final List<String> _languages = [
     'All',
     'Python',
@@ -46,6 +50,7 @@ class _CodeChallengesScreenState extends State<CodeChallengesScreen> {
     _loadChallenges();
   }
 
+  /// Load challenges from Firestore
   Future<void> _loadChallenges() async {
     setState(() => _isLoading = true);
 
@@ -65,6 +70,7 @@ class _CodeChallengesScreenState extends State<CodeChallengesScreen> {
     }
   }
 
+  /// Filter challenges based on selected criteria
   List<CodeChallengeModel> get _filteredChallenges {
     return _challenges.where((challenge) {
       if (_selectedLanguage != 'All' &&
@@ -83,6 +89,7 @@ class _CodeChallengesScreenState extends State<CodeChallengesScreen> {
     }).toList();
   }
 
+  /// Get color based on difficulty level
   Color _getDifficultyColor(String difficulty) {
     switch (difficulty.toLowerCase()) {
       case 'easy':
@@ -119,7 +126,7 @@ class _CodeChallengesScreenState extends State<CodeChallengesScreen> {
       ),
       body: Column(
         children: [
-          // Filters
+          // Filter Controls
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -136,6 +143,7 @@ class _CodeChallengesScreenState extends State<CodeChallengesScreen> {
               children: [
                 Row(
                   children: [
+                    // Language filter
                     Expanded(
                       child: _buildFilterDropdown(
                         label: 'Language',
@@ -147,6 +155,7 @@ class _CodeChallengesScreenState extends State<CodeChallengesScreen> {
                       ),
                     ),
                     const SizedBox(width: 12),
+                    // Difficulty filter
                     Expanded(
                       child: _buildFilterDropdown(
                         label: 'Difficulty',
@@ -160,6 +169,7 @@ class _CodeChallengesScreenState extends State<CodeChallengesScreen> {
                   ],
                 ),
                 const SizedBox(height: 12),
+                // Category filter
                 _buildFilterDropdown(
                   label: 'Category',
                   value: _selectedCategory,
@@ -177,37 +187,7 @@ class _CodeChallengesScreenState extends State<CodeChallengesScreen> {
             child: _isLoading
                 ? const LoadingWidget()
                 : _filteredChallenges.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.code_off,
-                              size: 64,
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No challenges found',
-                              style: theme.textTheme.titleLarge?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Try adjusting your filters',
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            ElevatedButton(
-                              onPressed: _createSampleChallenges,
-                              child: const Text('Create Sample Challenges'),
-                            ),
-                          ],
-                        ),
-                      )
+                    ? _buildEmptyState()
                     : ListView.builder(
                         padding: const EdgeInsets.all(16),
                         itemCount: _filteredChallenges.length,
@@ -225,6 +205,44 @@ class _CodeChallengesScreenState extends State<CodeChallengesScreen> {
     );
   }
 
+  /// Build empty state with option to create sample challenges
+  Widget _buildEmptyState() {
+    final theme = Theme.of(context);
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.code_off,
+            size: 64,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No challenges found',
+            style: theme.textTheme.titleLarge?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Try adjusting your filters',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: _createSampleChallenges,
+            child: const Text('Create Sample Challenges'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build filter dropdown widget
   Widget _buildFilterDropdown({
     required String label,
     required String value,
@@ -268,6 +286,7 @@ class _CodeChallengesScreenState extends State<CodeChallengesScreen> {
     );
   }
 
+  /// Build challenge card widget
   Widget _buildChallengeCard(CodeChallengeModel challenge) {
     final theme = Theme.of(context);
 
@@ -294,6 +313,7 @@ class _CodeChallengesScreenState extends State<CodeChallengesScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Title and difficulty
               Row(
                 children: [
                   Expanded(
@@ -324,6 +344,7 @@ class _CodeChallengesScreenState extends State<CodeChallengesScreen> {
                 ],
               ),
               const SizedBox(height: 8),
+              // Description
               Text(
                 challenge.description,
                 style: theme.textTheme.bodyMedium?.copyWith(
@@ -334,6 +355,7 @@ class _CodeChallengesScreenState extends State<CodeChallengesScreen> {
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 12),
+              // Tags and XP
               Row(
                 children: [
                   _buildChip(
@@ -374,6 +396,7 @@ class _CodeChallengesScreenState extends State<CodeChallengesScreen> {
     );
   }
 
+  /// Build chip widget for tags
   Widget _buildChip(IconData icon, String label, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -403,7 +426,8 @@ class _CodeChallengesScreenState extends State<CodeChallengesScreen> {
     );
   }
 
-  // Create sample challenges for testing
+  /// Create sample challenges for testing
+  /// Populates database with example coding problems
   Future<void> _createSampleChallenges() async {
     final sampleChallenges = [
       {
