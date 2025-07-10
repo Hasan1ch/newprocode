@@ -5,12 +5,16 @@ import 'package:procode/models/leaderboard_entry_model.dart';
 import 'package:procode/services/database_service.dart';
 import 'package:procode/utils/app_logger.dart';
 
+// Filter options for leaderboard display
 enum LeaderboardFilter { global, byCourse }
 
+/// Provider managing leaderboard data and rankings
+/// Implements caching and real-time updates for competitive features
 class LeaderboardProvider extends ChangeNotifier {
   final DatabaseService _databaseService = DatabaseService();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  // Leaderboard data
   List<LeaderboardEntry> _entries = [];
   LeaderboardFilter _currentFilter = LeaderboardFilter.global;
   String? _selectedCourseId;
@@ -19,15 +23,16 @@ class LeaderboardProvider extends ChangeNotifier {
   int? _userRank;
   LeaderboardEntry? _userEntry;
 
-  // Cache management
+  // Cache management to reduce database reads
   DateTime? _lastFetchTime;
   static const Duration _cacheValidDuration = Duration(minutes: 5);
 
-  // Real-time listeners
+  // Real-time listeners for live updates
   StreamSubscription? _leaderboardSubscription;
   StreamSubscription? _userSubscription;
   String? _currentUserId;
 
+  // Getters for UI binding
   List<LeaderboardEntry> get entries => _entries;
   LeaderboardFilter get currentFilter => _currentFilter;
   String? get selectedCourseId => _selectedCourseId;
@@ -37,12 +42,14 @@ class LeaderboardProvider extends ChangeNotifier {
   LeaderboardEntry? get userEntry => _userEntry;
 
   // Check if cache is still valid
+  // Prevents excessive database queries
   bool get _isCacheValid {
     if (_lastFetchTime == null) return false;
     return DateTime.now().difference(_lastFetchTime!) < _cacheValidDuration;
   }
 
   // Load leaderboard data with caching
+  // Uses cached data if available and fresh
   Future<void> loadLeaderboard({String? userId}) async {
     // Store current user ID for real-time updates
     _currentUserId = userId;
@@ -61,6 +68,7 @@ class LeaderboardProvider extends ChangeNotifier {
       // Cancel existing subscriptions
       await _cancelSubscriptions();
 
+      // Load based on current filter
       switch (_currentFilter) {
         case LeaderboardFilter.global:
           await _loadGlobalLeaderboard(userId);
@@ -83,6 +91,7 @@ class LeaderboardProvider extends ChangeNotifier {
   }
 
   // Load global leaderboard with real-time listener
+  // Shows top 100 users by total XP with live updates
   Future<void> _loadGlobalLeaderboard(String? userId) async {
     // Initial load
     _entries = await _databaseService.getGlobalLeaderboard(limit: 100);
@@ -116,6 +125,7 @@ class LeaderboardProvider extends ChangeNotifier {
   }
 
   // Load course leaderboard
+  // Shows rankings for a specific course
   Future<void> _loadCourseLeaderboard(String? userId) async {
     if (_selectedCourseId == null) return;
 
@@ -136,6 +146,7 @@ class LeaderboardProvider extends ChangeNotifier {
   }
 
   // Handle real-time leaderboard updates
+  // Updates rankings when users gain XP
   void _handleLeaderboardUpdate(QuerySnapshot snapshot, String? userId) {
     final entries = <LeaderboardEntry>[];
     int rank = 1;
@@ -150,8 +161,8 @@ class LeaderboardProvider extends ChangeNotifier {
         displayName: userData['displayName'] ?? userData['username'] ?? '',
         avatarUrl: userData['avatarUrl'],
         totalXP: userData['totalXP'] ?? 0,
-        weeklyXP: 0,
-        monthlyXP: 0,
+        weeklyXP: 0, // Would need calculation from activity data
+        monthlyXP: 0, // Would need calculation from activity data
         level: userData['level'] ?? 1,
         currentStreak: userData['currentStreak'] ?? 0,
         completedCourses: (userData['completedCourses'] as List?)?.length ?? 0,
@@ -176,6 +187,7 @@ class LeaderboardProvider extends ChangeNotifier {
   }
 
   // Handle user's own data updates
+  // Tracks user's rank even if not in top 100
   void _handleUserUpdate(DocumentSnapshot snapshot, String userId) async {
     if (!snapshot.exists) return;
 
@@ -210,6 +222,7 @@ class LeaderboardProvider extends ChangeNotifier {
   }
 
   // Change filter
+  // Switches between global and course-specific leaderboards
   void setFilter(LeaderboardFilter filter, {String? courseId}) {
     if (_currentFilter != filter ||
         (filter == LeaderboardFilter.byCourse &&
@@ -241,6 +254,7 @@ class LeaderboardProvider extends ChangeNotifier {
   }
 
   // Fetch user's actual rank if not in top 100
+  // Shows user their position even if not on visible leaderboard
   Future<void> _fetchUserRank(String userId) async {
     try {
       switch (_currentFilter) {
