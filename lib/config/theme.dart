@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:procode/config/app_colors.dart';
 
+// Central theme configuration for the entire app
+// Manages both light and dark themes with consistent styling
 class AppTheme {
-  // Add these static getters for backward compatibility with your existing code
+  // Quick access color getters for legacy code compatibility
+  // These map to our centralized color definitions
   static Color get cardColor => AppColors.surfaceDark;
   static Color get primaryColor => AppColors.primary;
   static Color get backgroundColor => AppColors.backgroundDark;
@@ -19,48 +22,50 @@ class AppTheme {
   static Color get border => AppColors.divider;
   static Color get textPrimary => AppColors.textLight;
 
-  // Primary Gradient
+  // Primary gradient for buttons and highlights
+  // Creates a smooth transition from lighter to darker purple
   static const LinearGradient primaryGradient = LinearGradient(
     colors: [AppColors.primary, AppColors.primaryDark],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
-  // Accent Gradient
+  // Secondary gradient for accent elements
+  // Used for special cards and achievement displays
   static const LinearGradient accentGradient = LinearGradient(
     colors: [AppColors.secondary, AppColors.secondaryDark],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
-  // Light Theme
+  // Light theme configuration for daytime use
   static ThemeData lightTheme = ThemeData(
     brightness: Brightness.light,
     primaryColor: AppColors.primary,
     scaffoldBackgroundColor: AppColors.backgroundLight,
-    fontFamily: 'Poppins',
-    useMaterial3: true,
+    fontFamily: 'Poppins', // Modern, clean font for readability
+    useMaterial3: true, // Latest Material Design guidelines
 
-    // Color Scheme
+    // Color palette for light mode
     colorScheme: const ColorScheme.light(
       primary: AppColors.primary,
       secondary: AppColors.secondary,
       surface: AppColors.surfaceLight,
       error: AppColors.error,
-      onPrimary: Colors.white,
-      onSecondary: Colors.white,
-      onSurface: AppColors.textDark,
-      onError: Colors.white,
-      outline: AppColors.divider,
-      surfaceContainerHighest: Color(0xFFE7E0EC),
-      onSurfaceVariant: AppColors.textGrey,
+      onPrimary: Colors.white, // Text on primary color
+      onSecondary: Colors.white, // Text on secondary color
+      onSurface: AppColors.textDark, // Text on surface elements
+      onError: Colors.white, // Text on error color
+      outline: AppColors.divider, // Border and divider color
+      surfaceContainerHighest: Color(0xFFE7E0EC), // Elevated surfaces
+      onSurfaceVariant: AppColors.textGrey, // Secondary text
     ),
 
-    // AppBar Theme
+    // Top navigation bar styling
     appBarTheme: const AppBarTheme(
-      elevation: 0,
-      centerTitle: true,
-      backgroundColor: Colors.transparent,
+      elevation: 0, // Flat design, no shadow
+      centerTitle: true, // Title always centered
+      backgroundColor: Colors.transparent, // Blends with background
       iconTheme: IconThemeData(color: AppColors.textDark),
       titleTextStyle: TextStyle(
         color: AppColors.textDark,
@@ -70,14 +75,14 @@ class AppTheme {
       ),
     ),
 
-    // Text Theme
+    // Typography system following Material Design hierarchy
     textTheme: const TextTheme(
-      // Display
+      // Large display text for hero sections
       displayLarge: TextStyle(
         fontSize: 32,
         fontWeight: FontWeight.bold,
         color: AppColors.textDark,
-        letterSpacing: -0.5,
+        letterSpacing: -0.5, // Tighter spacing for large text
       ),
       displayMedium: TextStyle(
         fontSize: 28,
@@ -90,7 +95,7 @@ class AppTheme {
         color: AppColors.textDark,
       ),
 
-      // Headline
+      // Section headers and titles
       headlineLarge: TextStyle(
         fontSize: 22,
         fontWeight: FontWeight.w600,
@@ -107,7 +112,7 @@ class AppTheme {
         color: AppColors.textDark,
       ),
 
-      // Title
+      // Card titles and list items
       titleLarge: TextStyle(
         fontSize: 16,
         fontWeight: FontWeight.w500,
@@ -124,7 +129,7 @@ class AppTheme {
         color: AppColors.textDark,
       ),
 
-      // Body
+      // Main content text
       bodyLarge: TextStyle(
         fontSize: 16,
         fontWeight: FontWeight.normal,
@@ -138,10 +143,10 @@ class AppTheme {
       bodySmall: TextStyle(
         fontSize: 12,
         fontWeight: FontWeight.normal,
-        color: AppColors.textGrey,
+        color: AppColors.textGrey, // Subtle for less important text
       ),
 
-      // Label
+      // Button and form labels
       labelLarge: TextStyle(
         fontSize: 14,
         fontWeight: FontWeight.w500,
@@ -159,17 +164,18 @@ class AppTheme {
       ),
     ),
 
-    // Card Theme
+    // Card design with subtle shadow
     cardTheme: CardTheme(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 2, // Subtle shadow
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16)), // Rounded corners
       color: AppColors.surfaceLight,
     ),
 
-    // Elevated Button Theme
+    // Primary action button styling
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        elevation: 0,
+        elevation: 0, // Flat design
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -182,7 +188,7 @@ class AppTheme {
       ),
     ),
 
-    // Text Button Theme
+    // Text-only button styling
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         foregroundColor: AppColors.primary,
@@ -195,7 +201,7 @@ class AppTheme {
       ),
     ),
 
-    // Outlined Button Theme
+    // Outlined button for secondary actions
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: AppColors.primary,
@@ -210,14 +216,14 @@ class AppTheme {
       ),
     ),
 
-    // Input Decoration Theme
+    // Text field styling for forms
     inputDecorationTheme: InputDecorationTheme(
-      filled: true,
+      filled: true, // Background fill
       fillColor: AppColors.surfaceLight,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide.none,
+        borderSide: BorderSide.none, // No border by default
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -225,7 +231,8 @@ class AppTheme {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.primary, width: 2),
+        borderSide: const BorderSide(
+            color: AppColors.primary, width: 2), // Highlight when focused
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -239,12 +246,12 @@ class AppTheme {
       hintStyle: const TextStyle(color: AppColors.textLight, fontSize: 14),
     ),
 
-    // Bottom Navigation Bar Theme
+    // Bottom navigation styling
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(
       backgroundColor: AppColors.surfaceLight,
       selectedItemColor: AppColors.primary,
       unselectedItemColor: AppColors.textGrey,
-      type: BottomNavigationBarType.fixed,
+      type: BottomNavigationBarType.fixed, // All items visible
       elevation: 8,
       selectedLabelStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
       unselectedLabelStyle: TextStyle(
@@ -253,7 +260,7 @@ class AppTheme {
       ),
     ),
 
-    // Chip Theme
+    // Filter and selection chips
     chipTheme: ChipThemeData(
       backgroundColor: AppColors.surfaceLight,
       disabledColor: AppColors.surfaceLight.withValues(alpha: 0.5),
@@ -273,14 +280,14 @@ class AppTheme {
       brightness: Brightness.light,
     ),
 
-    // Dialog Theme
+    // Modal dialog styling
     dialogTheme: DialogTheme(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       elevation: 8,
       backgroundColor: AppColors.surfaceLight,
     ),
 
-    // Bottom Sheet Theme
+    // Bottom sheet for actions
     bottomSheetTheme: const BottomSheetThemeData(
       backgroundColor: AppColors.surfaceLight,
       elevation: 8,
@@ -289,7 +296,7 @@ class AppTheme {
       ),
     ),
 
-    // Divider Theme
+    // Divider lines between content
     dividerTheme: const DividerThemeData(
       color: AppColors.divider,
       thickness: 1,
@@ -297,7 +304,8 @@ class AppTheme {
     ),
   );
 
-  // Dark Theme
+  // Dark theme configuration for night mode
+  // Mirrors light theme structure with appropriate dark colors
   static ThemeData darkTheme = ThemeData(
     brightness: Brightness.dark,
     primaryColor: AppColors.primary,
@@ -305,7 +313,7 @@ class AppTheme {
     fontFamily: 'Poppins',
     useMaterial3: true,
 
-    // Color Scheme
+    // Dark mode color palette
     colorScheme: const ColorScheme.dark(
       primary: AppColors.primary,
       secondary: AppColors.secondary,
@@ -315,12 +323,12 @@ class AppTheme {
       onSecondary: Colors.white,
       onSurface: AppColors.textLight,
       onError: Colors.white,
-      outline: Color(0xFF49454F),
+      outline: Color(0xFF49454F), // Subtle borders in dark mode
       surfaceContainerHighest: Color(0xFF49454F),
       onSurfaceVariant: Color(0xFFCAC4D0),
     ),
 
-    // AppBar Theme
+    // Dark mode app bar
     appBarTheme: const AppBarTheme(
       elevation: 0,
       centerTitle: true,
@@ -334,9 +342,9 @@ class AppTheme {
       ),
     ),
 
-    // Text Theme
+    // Dark mode typography - same sizes, different colors
     textTheme: const TextTheme(
-      // Display
+      // Display styles for dark mode
       displayLarge: TextStyle(
         fontSize: 32,
         fontWeight: FontWeight.bold,
@@ -354,7 +362,7 @@ class AppTheme {
         color: AppColors.textLight,
       ),
 
-      // Headline
+      // Headlines for dark mode
       headlineLarge: TextStyle(
         fontSize: 22,
         fontWeight: FontWeight.w600,
@@ -371,7 +379,7 @@ class AppTheme {
         color: AppColors.textLight,
       ),
 
-      // Title
+      // Titles for dark mode
       titleLarge: TextStyle(
         fontSize: 16,
         fontWeight: FontWeight.w500,
@@ -388,7 +396,7 @@ class AppTheme {
         color: AppColors.textLight,
       ),
 
-      // Body
+      // Body text for dark mode
       bodyLarge: TextStyle(
         fontSize: 16,
         fontWeight: FontWeight.normal,
@@ -405,7 +413,7 @@ class AppTheme {
         color: AppColors.textGrey,
       ),
 
-      // Label
+      // Labels for dark mode
       labelLarge: TextStyle(
         fontSize: 14,
         fontWeight: FontWeight.w500,
@@ -423,14 +431,14 @@ class AppTheme {
       ),
     ),
 
-    // Card Theme
+    // Dark mode card styling
     cardTheme: CardTheme(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       color: AppColors.surfaceDark,
     ),
 
-    // Elevated Button Theme
+    // Buttons maintain same style in dark mode
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         elevation: 0,
@@ -446,7 +454,7 @@ class AppTheme {
       ),
     ),
 
-    // Text Button Theme
+    // Text button for dark mode
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         foregroundColor: AppColors.primary,
@@ -459,7 +467,7 @@ class AppTheme {
       ),
     ),
 
-    // Outlined Button Theme
+    // Outlined button for dark mode
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: AppColors.primary,
@@ -474,7 +482,7 @@ class AppTheme {
       ),
     ),
 
-    // Input Decoration Theme
+    // Dark mode input fields
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: AppColors.surfaceDark,
@@ -501,12 +509,12 @@ class AppTheme {
       ),
       labelStyle: const TextStyle(color: AppColors.textGrey, fontSize: 14),
       hintStyle: TextStyle(
-        color: AppColors.textGrey.withValues(alpha: 0.7),
+        color: AppColors.textGrey.withValues(alpha: 0.7), // Dimmer hints
         fontSize: 14,
       ),
     ),
 
-    // Bottom Navigation Bar Theme
+    // Dark mode bottom navigation
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(
       backgroundColor: AppColors.surfaceDark,
       selectedItemColor: AppColors.primary,
@@ -520,7 +528,7 @@ class AppTheme {
       ),
     ),
 
-    // Chip Theme
+    // Dark mode chips
     chipTheme: ChipThemeData(
       backgroundColor: AppColors.surfaceDark,
       disabledColor: AppColors.surfaceDark.withValues(alpha: 0.5),
@@ -540,14 +548,14 @@ class AppTheme {
       brightness: Brightness.dark,
     ),
 
-    // Dialog Theme
+    // Dark mode dialogs
     dialogTheme: DialogTheme(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       elevation: 8,
       backgroundColor: AppColors.surfaceDark,
     ),
 
-    // Bottom Sheet Theme
+    // Dark mode bottom sheets
     bottomSheetTheme: const BottomSheetThemeData(
       backgroundColor: AppColors.surfaceDark,
       elevation: 8,
@@ -556,9 +564,10 @@ class AppTheme {
       ),
     ),
 
-    // Divider Theme
+    // Subtle dividers for dark mode
     dividerTheme: DividerThemeData(
-      color: AppColors.divider.withValues(alpha: 0.3),
+      color: AppColors.divider
+          .withValues(alpha: 0.3), // More transparent in dark mode
       thickness: 1,
       space: 1,
     ),
