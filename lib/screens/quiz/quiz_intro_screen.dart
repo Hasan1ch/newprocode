@@ -8,6 +8,8 @@ import 'package:procode/widgets/animations/slide_animation.dart';
 import 'package:procode/widgets/common/custom_button.dart';
 import 'package:procode/config/app_colors.dart';
 
+/// Quiz introduction screen that shows quiz details before starting
+/// Displays rules, time limits, and potential rewards to prepare users
 class QuizIntroScreen extends StatefulWidget {
   final Quiz quiz;
 
@@ -28,26 +30,31 @@ class _QuizIntroScreenState extends State<QuizIntroScreen> {
   @override
   void initState() {
     super.initState();
+    // Load user's previous attempts on this quiz
     _loadQuizHistory();
   }
 
+  /// Checks if user has taken this quiz before and loads their best score
   Future<void> _loadQuizHistory() async {
     setState(() => _isLoading = true);
 
     final quizProvider = context.read<QuizProvider>();
     _hasCompleted = await quizProvider.hasCompletedQuiz(widget.quiz.id);
     if (_hasCompleted) {
+      // Only load best score if they've completed it before
       _bestScore = await quizProvider.getUserBestScore(widget.quiz.id);
     }
 
     setState(() => _isLoading = false);
   }
 
+  /// Initializes quiz session and navigates to quiz screen
   void _startQuiz() async {
     final quizProvider = context.read<QuizProvider>();
     await quizProvider.startQuiz(widget.quiz.id);
 
     if (mounted) {
+      // Replace current screen to prevent going back during quiz
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -79,6 +86,7 @@ class _QuizIntroScreenState extends State<QuizIntroScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Quiz icon
                 FadeAnimation(
                   child: Container(
                     width: 80,
@@ -95,6 +103,8 @@ class _QuizIntroScreenState extends State<QuizIntroScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
+
+                // Quiz title and description
                 FadeAnimation(
                   delay: 0.1,
                   child: Text(
@@ -119,6 +129,8 @@ class _QuizIntroScreenState extends State<QuizIntroScreen> {
                   ),
                 ),
                 const SizedBox(height: 32),
+
+                // Quiz information cards
                 SlideAnimation(
                   delay: 0.3,
                   child: _buildInfoCard(
@@ -149,6 +161,8 @@ class _QuizIntroScreenState extends State<QuizIntroScreen> {
                     subtitle: _getXPBreakdown(),
                   ),
                 ),
+
+                // Show best score if user has completed this quiz before
                 if (_hasCompleted && _bestScore != null) ...[
                   const SizedBox(height: 16),
                   SlideAnimation(
@@ -163,6 +177,8 @@ class _QuizIntroScreenState extends State<QuizIntroScreen> {
                   ),
                 ],
                 const SizedBox(height: 32),
+
+                // Quiz rules section
                 FadeAnimation(
                   delay: 0.7,
                   child: Container(
@@ -194,6 +210,7 @@ class _QuizIntroScreenState extends State<QuizIntroScreen> {
                           ],
                         ),
                         const SizedBox(height: 12),
+                        // Important rules users should know before starting
                         _buildRule(
                             '• You cannot go back once you answer a question'),
                         _buildRule(
@@ -206,6 +223,8 @@ class _QuizIntroScreenState extends State<QuizIntroScreen> {
                   ),
                 ),
                 const SizedBox(height: 32),
+
+                // Action buttons
                 SlideAnimation(
                   delay: 0.8,
                   direction: SlideDirection.up,
@@ -238,6 +257,7 @@ class _QuizIntroScreenState extends State<QuizIntroScreen> {
     );
   }
 
+  /// Creates an information card with icon, title, value, and subtitle
   Widget _buildInfoCard({
     required IconData icon,
     required String title,
@@ -259,6 +279,7 @@ class _QuizIntroScreenState extends State<QuizIntroScreen> {
       ),
       child: Row(
         children: [
+          // Icon container with themed background
           Container(
             width: 48,
             height: 48,
@@ -273,6 +294,7 @@ class _QuizIntroScreenState extends State<QuizIntroScreen> {
             ),
           ),
           const SizedBox(width: 16),
+          // Information text
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -309,6 +331,7 @@ class _QuizIntroScreenState extends State<QuizIntroScreen> {
     );
   }
 
+  /// Individual rule item with bullet point
   Widget _buildRule(String rule) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -323,6 +346,8 @@ class _QuizIntroScreenState extends State<QuizIntroScreen> {
     );
   }
 
+  /// Returns XP reward breakdown based on quiz category
+  /// Different categories have different reward structures
   String _getXPBreakdown() {
     switch (widget.quiz.category.toLowerCase()) {
       case 'module':
