@@ -21,10 +21,13 @@ import 'package:procode/services/code_editor_service.dart';
 import 'package:procode/services/judge0_service.dart';
 import 'package:procode/widgets/common/custom_app_bar.dart';
 
+/// Main code editor screen that provides an interactive coding environment
+/// Students can write, run, and test their code solutions here
+/// Supports multiple programming languages and themes for better learning experience
 class CodeEditorScreen extends StatefulWidget {
-  final CodeChallengeModel? challenge;
-  final String? initialCode;
-  final String? language;
+  final CodeChallengeModel? challenge; // Optional challenge to solve
+  final String? initialCode; // Pre-filled code when opening the editor
+  final String? language; // Preferred programming language
 
   const CodeEditorScreen({
     super.key,
@@ -38,27 +41,31 @@ class CodeEditorScreen extends StatefulWidget {
 }
 
 class _CodeEditorScreenState extends State<CodeEditorScreen> {
-  late CodeController _codeController;
-  final CodeEditorService _codeService = CodeEditorService();
-  final Judge0Service _judge0Service = Judge0Service();
+  late CodeController _codeController; // Controls the code editor widget
+  final CodeEditorService _codeService =
+      CodeEditorService(); // Handles code-related operations
+  final Judge0Service _judge0Service =
+      Judge0Service(); // External service for code execution
 
-  // Editor settings
-  String _selectedLanguage = 'Python';
-  String _selectedTheme = 'Dark';
-  double _fontSize = 14;
-  bool _wrapLines = false;
-  final bool _showLineNumbers = true;
-  bool _showAIAssistant = false;
+  // Editor customization settings that enhance the coding experience
+  String _selectedLanguage =
+      'Python'; // Default to Python as it's beginner-friendly
+  String _selectedTheme = 'Dark'; // Most developers prefer dark themes
+  double _fontSize = 14; // Readable font size for code
+  bool _wrapLines = false; // Line wrapping can help with long lines
+  final bool _showLineNumbers =
+      true; // Always show line numbers for easy reference
+  bool _showAIAssistant = false; // Toggle for AI coding assistant panel
 
-  // Output
-  String _output = '';
-  String _error = '';
-  bool _isRunning = false;
-  List<Map<String, dynamic>>? _testResults;
+  // Code execution results and state management
+  String _output = ''; // Program output from stdout
+  String _error = ''; // Error messages from stderr
+  bool _isRunning = false; // Prevents multiple simultaneous executions
+  List<Map<String, dynamic>>? _testResults; // Results from running test cases
 
-  // Auto-save
-  DateTime? _lastSaveTime;
-  bool _hasUnsavedChanges = false;
+  // Auto-save functionality to prevent losing student work
+  DateTime? _lastSaveTime; // Tracks when we last saved
+  bool _hasUnsavedChanges = false; // Shows save indicator in UI
 
   @override
   void initState() {
@@ -66,15 +73,17 @@ class _CodeEditorScreenState extends State<CodeEditorScreen> {
     _initializeEditor();
   }
 
+  /// Sets up the code editor with the appropriate language and initial code
+  /// Prioritizes: widget.language > challenge.language > default Python
   void _initializeEditor() {
-    // Set initial language
+    // Determine which language to use based on context
     if (widget.language != null) {
       _selectedLanguage = widget.language!;
     } else if (widget.challenge != null) {
       _selectedLanguage = widget.challenge!.language;
     }
 
-    // Initialize code controller
+    // Initialize the code controller with syntax highlighting
     _codeController = CodeController(
       text: widget.initialCode ??
           widget.challenge?.initialCode ??
@@ -82,21 +91,23 @@ class _CodeEditorScreenState extends State<CodeEditorScreen> {
       language: _getLanguageMode(_selectedLanguage),
     );
 
-    // Listen for code changes
+    // Track code changes for auto-save functionality
     _codeController.addListener(_onCodeChanged);
 
-    // Load saved draft if exists
+    // Load any previously saved draft after the widget builds
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadDraft();
     });
   }
 
+  /// Triggered whenever the user types in the editor
+  /// Implements auto-save with a 2-second debounce to avoid excessive saves
   void _onCodeChanged() {
     setState(() {
       _hasUnsavedChanges = true;
     });
 
-    // Auto-save after 2 seconds of inactivity
+    // Debounced auto-save to prevent overwhelming the database
     Future.delayed(const Duration(seconds: 2), () {
       if (_hasUnsavedChanges &&
           (_lastSaveTime == null ||
@@ -107,6 +118,8 @@ class _CodeEditorScreenState extends State<CodeEditorScreen> {
     });
   }
 
+  /// Loads previously saved code drafts so students don't lose their work
+  /// Only loads drafts for authenticated users working on challenges
   Future<void> _loadDraft() async {
     if (widget.challenge != null) {
       final userProvider = context.read<UserProvider>();
@@ -118,6 +131,7 @@ class _CodeEditorScreenState extends State<CodeEditorScreen> {
           widget.challenge!.id,
         );
 
+        // Only update the editor if we found a saved draft
         if (draft != null && draft.isNotEmpty && mounted) {
           setState(() {
             _codeController.text = draft;
@@ -127,6 +141,8 @@ class _CodeEditorScreenState extends State<CodeEditorScreen> {
     }
   }
 
+  /// Saves the current code as a draft to prevent data loss
+  /// This runs automatically after 2 seconds of inactivity
   Future<void> _saveDraft() async {
     if (widget.challenge != null) {
       final userProvider = context.read<UserProvider>();
@@ -139,6 +155,7 @@ class _CodeEditorScreenState extends State<CodeEditorScreen> {
           code: _codeController.text,
         );
 
+        // Update UI to show the code has been saved
         if (mounted) {
           setState(() {
             _hasUnsavedChanges = false;
@@ -149,7 +166,10 @@ class _CodeEditorScreenState extends State<CodeEditorScreen> {
     }
   }
 
+  /// Executes the user's code using the Piston API (via Judge0 service)
+  /// Handles both standalone code execution and challenge test cases
   Future<void> _runCode() async {
+    // Reset the output area and show loading state
     setState(() {
       _isRunning = true;
       _output = '';
@@ -158,6 +178,7 @@ class _CodeEditorScreenState extends State<CodeEditorScreen> {
     });
 
     try {
+      // Execute the code with Piston API for safe sandboxed execution
       final result = await _judge0Service.executeCodeWithPiston(
         code: _codeController.text,
         language: _selectedLanguage,
@@ -170,7 +191,7 @@ class _CodeEditorScreenState extends State<CodeEditorScreen> {
         _isRunning = false;
       });
 
-      // Run test cases if this is a challenge
+      // If this is a challenge, run all test cases to check correctness
       if (widget.challenge != null) {
         await _runTestCases();
       }
@@ -182,11 +203,14 @@ class _CodeEditorScreenState extends State<CodeEditorScreen> {
     }
   }
 
+  /// Runs all test cases for a challenge and checks if the solution is correct
+  /// Automatically submits the solution if all tests pass
   Future<void> _runTestCases() async {
     if (widget.challenge == null) return;
 
     final results = <Map<String, dynamic>>[];
 
+    // Run each test case independently to check correctness
     for (int i = 0; i < widget.challenge!.testCases.length; i++) {
       final testCase = widget.challenge!.testCases[i];
 
@@ -197,6 +221,7 @@ class _CodeEditorScreenState extends State<CodeEditorScreen> {
           stdin: testCase.input,
         );
 
+        // Compare actual output with expected output
         final actualOutput = (result['stdout'] ?? '').trim();
         final expectedOutput = testCase.expectedOutput.trim();
         final passed = actualOutput == expectedOutput;
@@ -210,6 +235,7 @@ class _CodeEditorScreenState extends State<CodeEditorScreen> {
           'executionTime': result['time'],
         });
       } catch (e) {
+        // Handle execution errors for individual test cases
         results.add({
           'testCase': testCase.description,
           'input': testCase.input,
@@ -224,12 +250,13 @@ class _CodeEditorScreenState extends State<CodeEditorScreen> {
       _testResults = results;
     });
 
-    // If all tests passed, submit the solution
+    // Check if all tests passed and submit the solution
     if (results.every((r) => r['passed'] == true) && widget.challenge != null) {
       final userProvider = context.read<UserProvider>();
       final user = userProvider.user;
 
       if (user != null) {
+        // Save the successful solution to track student progress
         await _codeService.submitSolution(
           userId: user.id,
           challengeId: widget.challenge!.id,
@@ -237,12 +264,12 @@ class _CodeEditorScreenState extends State<CodeEditorScreen> {
           language: _selectedLanguage,
         );
 
-        // Show success dialog
+        // Celebrate the student's success with XP rewards
         if (mounted) {
           _showSuccessDialog();
         }
       } else {
-        // Show login required message
+        // Prompt login for non-authenticated users
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -254,6 +281,8 @@ class _CodeEditorScreenState extends State<CodeEditorScreen> {
     }
   }
 
+  /// Shows a celebration dialog when the student completes a challenge
+  /// This positive reinforcement encourages continued learning
   void _showSuccessDialog() {
     showDialog(
       context: context,
@@ -287,8 +316,8 @@ class _CodeEditorScreenState extends State<CodeEditorScreen> {
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.pop(context);
-              Navigator.pop(context);
+              Navigator.pop(context); // Close dialog
+              Navigator.pop(context); // Return to challenges list
             },
             child: const Text('Continue'),
           ),
@@ -297,14 +326,15 @@ class _CodeEditorScreenState extends State<CodeEditorScreen> {
     );
   }
 
+  /// Basic code formatting to improve readability
+  /// Currently handles extra blank lines and trailing whitespace
   void _formatCode() {
-    // Basic formatting - you can enhance this
     String code = _codeController.text;
 
-    // Remove extra blank lines
+    // Remove excessive blank lines (more than 2 consecutive)
     code = code.replaceAll(RegExp(r'\n\s*\n\s*\n'), '\n\n');
 
-    // Trim trailing whitespace
+    // Clean up trailing whitespace on each line
     code = code.split('\n').map((line) => line.trimRight()).join('\n');
 
     setState(() {
@@ -312,6 +342,7 @@ class _CodeEditorScreenState extends State<CodeEditorScreen> {
     });
   }
 
+  /// Clears the output console for a fresh start
   void _clearConsole() {
     setState(() {
       _output = '';
@@ -320,6 +351,8 @@ class _CodeEditorScreenState extends State<CodeEditorScreen> {
     });
   }
 
+  /// Provides starter code templates for each supported language
+  /// Helps beginners understand basic program structure
   String _getDefaultCode(String language) {
     switch (language.toLowerCase()) {
       case 'python':
@@ -337,6 +370,7 @@ class _CodeEditorScreenState extends State<CodeEditorScreen> {
     }
   }
 
+  /// Maps language names to their syntax highlighting modes
   Mode _getLanguageMode(String language) {
     switch (language.toLowerCase()) {
       case 'python':
@@ -354,6 +388,8 @@ class _CodeEditorScreenState extends State<CodeEditorScreen> {
     }
   }
 
+  /// Returns the appropriate syntax highlighting theme
+  /// Different themes can help with eye strain during long coding sessions
   Map<String, TextStyle> _getTheme(String themeName) {
     switch (themeName) {
       case 'Light':
@@ -371,6 +407,7 @@ class _CodeEditorScreenState extends State<CodeEditorScreen> {
 
   @override
   void dispose() {
+    // Clean up listeners to prevent memory leaks
     _codeController.removeListener(_onCodeChanged);
     _codeController.dispose();
     super.dispose();
@@ -386,6 +423,7 @@ class _CodeEditorScreenState extends State<CodeEditorScreen> {
         title: widget.challenge?.title ?? 'Code Editor',
         showBackButton: true,
         actions: [
+          // Visual indicator when code hasn't been saved yet
           if (_hasUnsavedChanges)
             Padding(
               padding: const EdgeInsets.only(right: 8),
@@ -396,12 +434,14 @@ class _CodeEditorScreenState extends State<CodeEditorScreen> {
                 padding: EdgeInsets.zero,
               ),
             ),
+          // Run button with keyboard shortcut tooltip
           IconButton(
             icon: const Icon(Icons.play_arrow),
             onPressed: _isRunning ? null : _runCode,
             tooltip: 'Run Code (Ctrl+Enter)',
             color: Colors.green,
           ),
+          // Toggle AI assistant for coding help
           IconButton(
             icon: Icon(
               _showAIAssistant ? Icons.close : Icons.auto_awesome,
@@ -417,7 +457,7 @@ class _CodeEditorScreenState extends State<CodeEditorScreen> {
       ),
       body: Column(
         children: [
-          // Challenge Description (if exists)
+          // Challenge description header - shows what problem to solve
           if (widget.challenge != null)
             Container(
               width: double.infinity,
@@ -440,6 +480,7 @@ class _CodeEditorScreenState extends State<CodeEditorScreen> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
+                      // Difficulty indicator helps students choose appropriate challenges
                       Chip(
                         label: Text(widget.challenge!.difficulty),
                         backgroundColor: _getDifficultyColor(
@@ -452,6 +493,7 @@ class _CodeEditorScreenState extends State<CodeEditorScreen> {
                         padding: EdgeInsets.zero,
                       ),
                       const SizedBox(width: 8),
+                      // XP reward motivates students to complete challenges
                       Chip(
                         label: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -470,7 +512,7 @@ class _CodeEditorScreenState extends State<CodeEditorScreen> {
               ),
             ),
 
-          // Editor Toolbar
+          // Toolbar for customizing the editor experience
           EditorToolbar(
             selectedLanguage: _selectedLanguage,
             selectedTheme: _selectedTheme,
@@ -500,11 +542,11 @@ class _CodeEditorScreenState extends State<CodeEditorScreen> {
             onFormat: _formatCode,
           ),
 
-          // Main Content Area
+          // Main coding area with optional AI assistant
           Expanded(
             child: Row(
               children: [
-                // Code Editor
+                // The actual code editor with syntax highlighting
                 Expanded(
                   child: Container(
                     color: _selectedTheme == 'Light'
@@ -513,7 +555,7 @@ class _CodeEditorScreenState extends State<CodeEditorScreen> {
                     child: RawKeyboardListener(
                       focusNode: FocusNode(),
                       onKey: (event) {
-                        // Handle keyboard shortcuts
+                        // Keyboard shortcut for running code quickly
                         if (event.isControlPressed &&
                             event.logicalKey == LogicalKeyboardKey.enter) {
                           _runCode();
@@ -530,7 +572,7 @@ class _CodeEditorScreenState extends State<CodeEditorScreen> {
                             ),
                             wrap: _wrapLines,
                             lineNumbers: _showLineNumbers,
-                            minLines: 30,
+                            minLines: 30, // Ensures adequate editing space
                           ),
                         ),
                       ),
@@ -538,7 +580,7 @@ class _CodeEditorScreenState extends State<CodeEditorScreen> {
                   ),
                 ),
 
-                // AI Assistant Panel
+                // AI Assistant side panel for coding help and suggestions
                 if (_showAIAssistant)
                   AIAssistantPanel(
                     code: _codeController.text,
@@ -559,7 +601,7 @@ class _CodeEditorScreenState extends State<CodeEditorScreen> {
             ),
           ),
 
-          // Output Console
+          // Output console shows execution results and test outcomes
           SizedBox(
             height: 250,
             child: OutputConsole(
@@ -582,6 +624,8 @@ class _CodeEditorScreenState extends State<CodeEditorScreen> {
     );
   }
 
+  /// Returns appropriate color for difficulty levels
+  /// Green for easy, orange for medium, red for hard
   Color _getDifficultyColor(String difficulty) {
     switch (difficulty.toLowerCase()) {
       case 'easy':
