@@ -1,24 +1,38 @@
 import 'package:intl/intl.dart';
 
+/// Centralized formatting utilities for consistent data presentation
+/// This class ensures all numbers, dates, and strings are formatted
+/// uniformly across the entire application
 class Formatters {
-  // Number Formatters
+  // Number Formatters - Used throughout the app for XP, scores, etc.
+
+  /// Formats integers with thousand separators
+  /// Example: 1234567 → "1,234,567"
   static String formatNumber(int number) {
     return NumberFormat('#,###').format(number);
   }
 
+  /// Formats decimals to specified precision
+  /// Used for percentage displays and calculations
   static String formatDecimal(double number, {int decimals = 2}) {
     return number.toStringAsFixed(decimals);
   }
 
+  /// Formats currency values with proper symbol and decimals
+  /// Currently using USD, but extensible for other currencies
   static String formatCurrency(double amount, {String symbol = '\$'}) {
     return NumberFormat.currency(symbol: symbol, decimalDigits: 2)
         .format(amount);
   }
 
+  /// Converts decimal to percentage string
+  /// Example: 0.856 → "85.6%"
   static String formatPercentage(double value) {
     return '${(value * 100).toStringAsFixed(1)}%';
   }
 
+  /// Formats large numbers in compact notation
+  /// Used in leaderboards: 1500 → "1.5K", 2000000 → "2.0M"
   static String formatCompactNumber(int number) {
     if (number >= 1000000) {
       return '${(number / 1000000).toStringAsFixed(1)}M';
@@ -28,31 +42,46 @@ class Formatters {
     return number.toString();
   }
 
-  // Date and Time Formatters
+  // Date and Time Formatters - Consistent date display across the app
+
+  /// Standard date format for course dates
+  /// Example: "Jan 15, 2024"
   static String formatDate(DateTime date) {
     return DateFormat('MMM dd, yyyy').format(date);
   }
 
+  /// Short date format for compact displays
+  /// Example: "Jan 15"
   static String formatDateShort(DateTime date) {
     return DateFormat('MMM dd').format(date);
   }
 
+  /// Full date with day name for detailed views
+  /// Example: "Monday, January 15, 2024"
   static String formatDateFull(DateTime date) {
     return DateFormat('EEEE, MMMM dd, yyyy').format(date);
   }
 
+  /// 12-hour time format for user-friendly display
+  /// Example: "3:45 PM"
   static String formatTime(DateTime time) {
     return DateFormat('hh:mm a').format(time);
   }
 
+  /// 24-hour time format for international users
+  /// Example: "15:45"
   static String formatTime24(DateTime time) {
     return DateFormat('HH:mm').format(time);
   }
 
+  /// Combined date and time for timestamps
+  /// Example: "Jan 15, 2024 • 3:45 PM"
   static String formatDateTime(DateTime dateTime) {
     return DateFormat('MMM dd, yyyy • hh:mm a').format(dateTime);
   }
 
+  /// Human-readable relative time
+  /// Creates friendly timestamps like "2 hours ago"
   static String formatRelativeTime(DateTime dateTime) {
     final now = DateTime.now();
     final difference = now.difference(dateTime);
@@ -77,6 +106,8 @@ class Formatters {
     }
   }
 
+  /// Formats duration for lesson/course lengths
+  /// Shows most relevant units: "2h 30m" or "45m 30s"
   static String formatDuration(Duration duration) {
     final hours = duration.inHours;
     final minutes = duration.inMinutes.remainder(60);
@@ -91,6 +122,8 @@ class Formatters {
     }
   }
 
+  /// Verbose duration format for accessibility
+  /// Example: "2 hours 30 minutes"
   static String formatDurationLong(Duration duration) {
     final hours = duration.inHours;
     final minutes = duration.inMinutes.remainder(60);
@@ -111,7 +144,10 @@ class Formatters {
     return parts.join(' ');
   }
 
-  // String Formatters
+  // String Formatters - User input and display formatting
+
+  /// Formats phone numbers for display
+  /// Handles US format: (123) 456-7890
   static String formatPhoneNumber(String phoneNumber) {
     // Remove all non-digit characters
     final digits = phoneNumber.replaceAll(RegExp(r'\D'), '');
@@ -128,6 +164,8 @@ class Formatters {
     return phoneNumber;
   }
 
+  /// Formats credit card numbers with spacing
+  /// Example: "1234 5678 9012 3456"
   static String formatCreditCard(String cardNumber) {
     // Remove all non-digit characters
     final digits = cardNumber.replaceAll(RegExp(r'\D'), '');
@@ -144,6 +182,8 @@ class Formatters {
     return buffer.toString();
   }
 
+  /// Masks credit card for security display
+  /// Shows only last 4 digits: "**** **** **** 3456"
   static String maskCreditCard(String cardNumber) {
     // Remove all non-digit characters
     final digits = cardNumber.replaceAll(RegExp(r'\D'), '');
@@ -158,6 +198,8 @@ class Formatters {
     return formatCreditCard(masked);
   }
 
+  /// Formats file sizes in human-readable units
+  /// Used for course resource downloads
   static String formatFileSize(int sizeInBytes) {
     if (sizeInBytes < 1024) {
       return '$sizeInBytes B';
@@ -170,6 +212,8 @@ class Formatters {
     }
   }
 
+  /// Truncates long text with ellipsis
+  /// Essential for course descriptions in card views
   static String truncateText(String text, int maxLength,
       {String suffix = '...'}) {
     if (text.length <= maxLength) {
@@ -179,24 +223,32 @@ class Formatters {
     return '${text.substring(0, maxLength - suffix.length)}$suffix';
   }
 
+  /// Capitalizes first letter of string
   static String capitalizeFirst(String text) {
     if (text.isEmpty) return text;
     return text[0].toUpperCase() + text.substring(1).toLowerCase();
   }
 
+  /// Capitalizes each word in string
+  /// Used for proper formatting of names and titles
   static String capitalizeWords(String text) {
     return text.split(' ').map((word) => capitalizeFirst(word)).join(' ');
   }
 
-  // XP and Level Formatters
+  // XP and Gamification Formatters - Specific to our app's features
+
+  /// Formats XP with proper notation
+  /// Example: 1500 → "1.5K XP"
   static String formatXP(int xp) {
     return '${formatCompactNumber(xp)} XP';
   }
 
+  /// Formats user level display
   static String formatLevel(int level) {
     return 'Level $level';
   }
 
+  /// Formats streak with proper pluralization
   static String formatStreak(int days) {
     if (days == 0) {
       return 'No streak';
@@ -207,6 +259,8 @@ class Formatters {
     }
   }
 
+  /// Formats leaderboard rankings with ordinals
+  /// 1 → "1st", 2 → "2nd", 3 → "3rd", 4 → "4th"
   static String formatRank(int rank) {
     if (rank == 1) return '1st';
     if (rank == 2) return '2nd';
@@ -216,6 +270,7 @@ class Formatters {
     final lastDigit = rank % 10;
     final lastTwoDigits = rank % 100;
 
+    // Special case for 11th, 12th, 13th
     if (lastTwoDigits >= 11 && lastTwoDigits <= 13) {
       return '${rank}th';
     }
@@ -232,7 +287,10 @@ class Formatters {
     }
   }
 
-  // Code Formatters
+  // Code and Course Formatters - Educational content specific
+
+  /// Maps language codes to full names
+  /// Used in code editor language selector
   static String formatCodeLanguage(String language) {
     final languageMap = {
       'js': 'JavaScript',
@@ -257,6 +315,8 @@ class Formatters {
     return languageMap[language.toLowerCase()] ?? language;
   }
 
+  /// Formats course duration from minutes
+  /// Example: 90 → "1 hour 30 min"
   static String formatCourseDuration(int minutes) {
     if (minutes < 60) {
       return '$minutes min';
@@ -272,6 +332,7 @@ class Formatters {
     return '$hours hour${hours > 1 ? 's' : ''} $remainingMinutes min';
   }
 
+  /// Formats module count with proper pluralization
   static String formatModuleCount(int count) {
     if (count == 1) {
       return '1 module';
@@ -279,6 +340,7 @@ class Formatters {
     return '$count modules';
   }
 
+  /// Formats lesson count with proper pluralization
   static String formatLessonCount(int count) {
     if (count == 1) {
       return '1 lesson';
@@ -286,10 +348,14 @@ class Formatters {
     return '$count lessons';
   }
 
+  /// Formats quiz scores as fractions
+  /// Example: "8 / 10"
   static String formatQuizScore(int correct, int total) {
     return '$correct / $total';
   }
 
+  /// Formats completion percentage
+  /// Example: 0.75 → "75% Complete"
   static String formatCompletionRate(double rate) {
     return '${(rate * 100).toStringAsFixed(0)}% Complete';
   }
