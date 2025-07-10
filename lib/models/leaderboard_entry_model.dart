@@ -1,46 +1,46 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Model representing a leaderboard entry
+/// Tracks user rankings and competitive statistics
 class LeaderboardEntry {
-  final String id; // Added for database service compatibility
-  final String userId;
-  final String username;
-  final String displayName; // Added for database service
-  final String? avatarUrl;
-  final int totalXP;
-  final int weeklyXP; // Added for weekly leaderboard
-  final int monthlyXP; // Added for monthly leaderboard
-  final int level;
-  final int currentStreak;
-  final int completedCourses;
-  final int rank; // Added for ranking
-  final DateTime lastActive;
-  final DateTime lastUpdated; // Added for database service
+  final String id; // Database identifier
+  final String userId; // Reference to user document
+  final String username; // Unique username
+  final String displayName; // Shown name (can differ from username)
+  final String? avatarUrl; // Profile picture URL
+  final int totalXP; // All-time experience points
+  final int weeklyXP; // XP earned this week
+  final int monthlyXP; // XP earned this month
+  final int level; // Current user level
+  final int currentStreak; // Days of consecutive learning
+  final int completedCourses; // Number of finished courses
+  final int rank; // Position on leaderboard
+  final DateTime lastActive; // Last learning activity
+  final DateTime lastUpdated; // Last database sync
 
   LeaderboardEntry({
-    String? id, // Made optional with fallback to userId
+    String? id, // Optional - defaults to userId
     required this.userId,
     required this.username,
-    String? displayName, // Made optional with fallback to username
+    String? displayName, // Optional - defaults to username
     this.avatarUrl,
     required this.totalXP,
-    int? weeklyXP, // Made optional with default
-    int? monthlyXP, // Made optional with default
+    int? weeklyXP, // Optional - defaults to 0
+    int? monthlyXP, // Optional - defaults to 0
     required this.level,
     required this.currentStreak,
     required this.completedCourses,
-    int? rank, // Made optional with default
+    int? rank, // Optional - defaults to 0
     required this.lastActive,
-    DateTime? lastUpdated, // Made optional with fallback
-  })  : id = id ?? userId, // Use userId as id if not provided
-        displayName = displayName ??
-            username, // Use username as displayName if not provided
+    DateTime? lastUpdated, // Optional - defaults to lastActive
+  })  : id = id ?? userId, // Fallback to userId if no id provided
+        displayName = displayName ?? username, // Fallback to username
         weeklyXP = weeklyXP ?? 0,
         monthlyXP = monthlyXP ?? 0,
         rank = rank ?? 0,
         lastUpdated = lastUpdated ?? lastActive;
 
-  /// Create LeaderboardEntry from JSON
+  /// Creates leaderboard entry from Firestore document
   factory LeaderboardEntry.fromJson(Map<String, dynamic> json) {
     return LeaderboardEntry(
       id: json['id'] ?? json['userId'] ?? '',
@@ -55,6 +55,7 @@ class LeaderboardEntry {
       currentStreak: json['currentStreak'] ?? 0,
       completedCourses: json['completedCourses'] ?? 0,
       rank: json['rank'] ?? 0,
+      // Handle both Timestamp and String date formats
       lastActive: json['lastActive'] != null
           ? (json['lastActive'] is Timestamp
               ? (json['lastActive'] as Timestamp).toDate()
@@ -76,7 +77,7 @@ class LeaderboardEntry {
     );
   }
 
-  /// Convert LeaderboardEntry to JSON
+  /// Converts entry to Firestore document format
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -96,7 +97,7 @@ class LeaderboardEntry {
     };
   }
 
-  /// Create a copy with updated fields
+  /// Creates a modified copy of the entry
   LeaderboardEntry copyWith({
     String? id,
     String? userId,
@@ -131,18 +132,21 @@ class LeaderboardEntry {
     );
   }
 
-  /// Compare entries for sorting
+  /// Compares entries for leaderboard sorting
+  /// Higher XP ranks higher
   int compareTo(LeaderboardEntry other) {
     // Sort by total XP in descending order
     return other.totalXP.compareTo(totalXP);
   }
 
-  /// Check if this entry represents the current user
+  /// Checks if this entry belongs to the current user
+  /// Used to highlight user's position
   bool isCurrentUser(String currentUserId) {
     return userId == currentUserId;
   }
 
-  /// Get formatted XP display
+  /// Formats large XP numbers for compact display
+  /// Examples: 1.5M, 23.4K, 999
   String getFormattedXP() {
     if (totalXP >= 1000000) {
       return '${(totalXP / 1000000).toStringAsFixed(1)}M';
@@ -152,14 +156,17 @@ class LeaderboardEntry {
     return totalXP.toString();
   }
 
-  /// Get rank display with suffix
+  /// Formats rank with proper ordinal suffix
+  /// Examples: 1st, 2nd, 3rd, 4th, 21st
   String getRankDisplay() {
     if (rank <= 0) return '-';
 
+    // Special case for 11th, 12th, 13th
     if (rank % 100 >= 11 && rank % 100 <= 13) {
       return '${rank}th';
     }
 
+    // Standard ordinal rules
     switch (rank % 10) {
       case 1:
         return '${rank}st';
@@ -172,17 +179,18 @@ class LeaderboardEntry {
     }
   }
 
-  /// Get rank badge color based on position
+  /// Returns color for rank badges
+  /// Top 3 get special colors
   String getRankBadgeColor() {
     switch (rank) {
       case 1:
-        return '#FFD700'; // Gold
+        return '#FFD700'; // Gold for 1st place
       case 2:
-        return '#C0C0C0'; // Silver
+        return '#C0C0C0'; // Silver for 2nd place
       case 3:
-        return '#CD7F32'; // Bronze
+        return '#CD7F32'; // Bronze for 3rd place
       default:
-        return '#9E9E9E'; // Default gray
+        return '#9E9E9E'; // Gray for everyone else
     }
   }
 }
