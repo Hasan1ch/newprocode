@@ -1,19 +1,20 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Model representing a lesson in a module
+/// Individual learning units containing educational content
 class LessonModel {
   final String id;
-  final String moduleId;
-  final String courseId;
+  final String moduleId; // Parent module reference
+  final String courseId; // Parent course reference
   final String title;
-  final String content;
-  final String videoUrl;
-  final int orderIndex;
-  final int estimatedMinutes;
-  final int xpReward;
-  final List<String> codeExamples;
-  final List<String> keyPoints;
-  final String? challengeId;
+  final String content; // Main lesson text/markdown
+  final String videoUrl; // Optional video content
+  final int orderIndex; // Lesson sequence in module
+  final int estimatedMinutes; // Time to complete
+  final int xpReward; // Points earned on completion
+  final List<String> codeExamples; // Sample code snippets
+  final List<String> keyPoints; // Main takeaways
+  final String? challengeId; // Optional coding exercise
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -34,7 +35,7 @@ class LessonModel {
     required this.updatedAt,
   });
 
-  /// Create LessonModel from JSON
+  /// Creates lesson from Firestore document
   factory LessonModel.fromJson(Map<String, dynamic> json) {
     return LessonModel(
       id: json['id'] ?? '',
@@ -45,7 +46,7 @@ class LessonModel {
       videoUrl: json['videoUrl'] ?? '',
       orderIndex: json['orderIndex'] ?? 0,
       estimatedMinutes: json['estimatedMinutes'] ?? 0,
-      xpReward: json['xpReward'] ?? 10,
+      xpReward: json['xpReward'] ?? 10, // Default 10 XP per lesson
       codeExamples: List<String>.from(json['codeExamples'] ?? []),
       keyPoints: List<String>.from(json['keyPoints'] ?? []),
       challengeId: json['challengeId'],
@@ -58,7 +59,7 @@ class LessonModel {
     );
   }
 
-  /// Convert LessonModel to JSON
+  /// Converts lesson to Firestore format
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -78,7 +79,7 @@ class LessonModel {
     };
   }
 
-  /// Create a copy with updated fields
+  /// Creates a modified copy of the lesson
   LessonModel copyWith({
     String? id,
     String? moduleId,
@@ -113,15 +114,17 @@ class LessonModel {
     );
   }
 
-  /// Check if lesson has a code challenge
+  /// Checks if lesson includes a coding challenge
   bool get hasChallenge => challengeId != null && challengeId!.isNotEmpty;
 
-  /// Get lesson type based on content
+  /// Determines lesson type based on content
+  /// Helps UI show appropriate icons
   String get lessonType {
-    if (videoUrl.isNotEmpty) return 'Video';
-    if (codeExamples.isNotEmpty) return 'Code';
-    return 'Reading';
+    if (videoUrl.isNotEmpty) return 'Video'; // Video lesson
+    if (codeExamples.isNotEmpty) return 'Code'; // Coding tutorial
+    return 'Reading'; // Text-based lesson
   }
 }
 
+// Alias for cleaner imports
 typedef Lesson = LessonModel;
