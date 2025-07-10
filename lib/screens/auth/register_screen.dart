@@ -9,6 +9,8 @@ import 'package:procode/config/routes.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:procode/config/app_colors.dart';
 
+/// Registration screen with real-time username availability checking
+/// Handles new user account creation with email verification
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
@@ -19,18 +21,24 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen>
     with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
+
+  // Form controllers
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _usernameController = TextEditingController();
   final _displayNameController = TextEditingController();
 
+  // UI state
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
   bool _agreedToTerms = false;
+
+  // Username availability checking
   bool _isCheckingUsername = false;
   bool _isUsernameAvailable = true;
 
+  // Animation controllers
   late AnimationController _fadeController;
   late AnimationController _slideController;
   late Animation<double> _fadeAnimation;
@@ -40,9 +48,11 @@ class _RegisterScreenState extends State<RegisterScreen>
   void initState() {
     super.initState();
     _initializeAnimations();
+    // Listen for username changes to check availability
     _usernameController.addListener(_checkUsernameAvailability);
   }
 
+  /// Initialize animations for smooth transitions
   void _initializeAnimations() {
     _fadeController = AnimationController(
       duration: const Duration(milliseconds: 800),
@@ -71,9 +81,12 @@ class _RegisterScreenState extends State<RegisterScreen>
     _slideController.forward();
   }
 
+  /// Check if username is available in real-time
+  /// Shows loading indicator while checking
   Future<void> _checkUsernameAvailability() async {
     final username = _usernameController.text.trim();
 
+    // Only check if username is at least 3 characters
     if (username.length < 3) {
       setState(() {
         _isCheckingUsername = false;
@@ -109,6 +122,8 @@ class _RegisterScreenState extends State<RegisterScreen>
     super.dispose();
   }
 
+  /// Handle registration process
+  /// Validates form and creates new user account
   Future<void> _handleRegister() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -132,12 +147,14 @@ class _RegisterScreenState extends State<RegisterScreen>
     );
 
     if (success && mounted) {
+      // Navigate to email verification
       Navigator.pushReplacementNamed(context, Routes.verifyEmail);
     } else {
       _showErrorSnackBar(authProvider.error ?? 'Registration failed');
     }
   }
 
+  /// Handle Google sign in for quick registration
   Future<void> _handleGoogleSignIn() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
@@ -150,6 +167,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     }
   }
 
+  /// Display error message to user
   void _showErrorSnackBar(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -198,7 +216,7 @@ class _RegisterScreenState extends State<RegisterScreen>
 
                         const SizedBox(height: 16),
 
-                        // Username Field
+                        // Username Field with availability check
                         AuthTextField(
                           controller: _usernameController,
                           hintText: 'Username',
@@ -212,6 +230,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                             return null;
                           },
                           textInputAction: TextInputAction.next,
+                          // Show loading or check/error icon
                           suffixIcon: _isCheckingUsername
                               ? const Padding(
                                   padding: EdgeInsets.all(12.0),
@@ -309,7 +328,7 @@ class _RegisterScreenState extends State<RegisterScreen>
 
                         const SizedBox(height: 32),
 
-                        // Register Button
+                        // Register Button with loading state
                         Consumer<AuthProvider>(
                           builder: (context, authProvider, _) {
                             return CustomButton(
@@ -349,6 +368,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     );
   }
 
+  /// Build header with logo and title
   Widget _buildHeader() {
     return Column(
       children: [
@@ -391,6 +411,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     );
   }
 
+  /// Build terms and conditions checkbox
   Widget _buildTermsCheckbox() {
     return Row(
       children: [
@@ -440,6 +461,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     );
   }
 
+  /// Build divider with "OR" text
   Widget _buildDivider() {
     return Row(
       children: [
@@ -468,6 +490,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     );
   }
 
+  /// Build Google sign in button
   Widget _buildSocialLogin() {
     return CustomButton(
       text: 'Continue with Google',
@@ -481,6 +504,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     );
   }
 
+  /// Build login link for existing users
   Widget _buildLoginLink() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
