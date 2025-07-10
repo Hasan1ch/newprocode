@@ -1,9 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:procode/models/progress_model.dart';
 
+/// Core user model representing a learner's complete profile
+/// This model contains all user data including progress, achievements,
+/// preferences, and gamification stats
 class UserModel {
   final String id;
-  final String uid; // Added for compatibility
+  final String uid; // Added for compatibility with Firebase Auth
   final String email;
   final String username;
   final String displayName;
@@ -11,20 +14,25 @@ class UserModel {
   final String? bio;
   final String? country;
   final String? learningGoal;
+  // Gamification fields
   final int totalXP;
   final int level;
   final int currentStreak;
   final int longestStreak;
   final DateTime? lastActiveDate;
   final DateTime createdAt;
+  // Course tracking
   final List<String> completedCourses;
   final List<String> enrolledCourses;
-  final Map<String, ProgressModel> progress; // courseId: progress
+  final Map<String, ProgressModel> progress; // Maps courseId to progress data
+  // Achievements system
   final List<String> achievements;
-  final List<String> featuredAchievements;
+  final List<String> featuredAchievements; // Displayed on profile
   final List<String> completedChallenges;
+  // User preferences and settings
   final Map<String, dynamic> privacySettings;
-  final Map<DateTime, int> activityData;
+  final Map<DateTime, int> activityData; // Daily activity tracking for streaks
+  // Learning preferences captured during onboarding
   final String? skillLevel;
   final String? learningStyle;
   final List<String>? preferredLanguages;
@@ -61,6 +69,7 @@ class UserModel {
   }) : uid = uid ?? id; // uid defaults to id for compatibility
 
   // Factory constructor for Firestore document
+  // Handles direct conversion from Firestore DocumentSnapshot
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     return UserModel.fromJson({
@@ -69,8 +78,10 @@ class UserModel {
     });
   }
 
+  // Main factory constructor for JSON parsing
+  // Handles backward compatibility with multiple field names
   factory UserModel.fromJson(Map<String, dynamic> json) {
-    // Parse progress map
+    // Parse progress map - converts JSON to ProgressModel instances
     Map<String, ProgressModel> progressMap = {};
     if (json['progress'] != null) {
       Map<String, dynamic> progressData =
@@ -81,7 +92,7 @@ class UserModel {
       });
     }
 
-    // Parse activity data
+    // Parse activity data - converts string dates to DateTime objects
     Map<DateTime, int> activityMap = {};
     if (json['activityData'] != null) {
       Map<String, dynamic> activityData =
@@ -92,6 +103,7 @@ class UserModel {
     }
 
     return UserModel(
+      // Handle both 'id' and 'uid' fields for compatibility
       id: json['id'] ?? json['uid'] ?? '',
       uid: json['uid'] ?? json['id'] ?? '',
       email: json['email'] ?? '',
@@ -101,15 +113,18 @@ class UserModel {
       bio: json['bio'],
       country: json['country'],
       learningGoal: json['learningGoal'],
+      // Support both 'totalXP' and 'xp' field names for backward compatibility
       totalXP: json['totalXP'] ?? json['xp'] ?? 0,
       level: json['level'] ?? 1,
       currentStreak: json['currentStreak'] ?? 0,
       longestStreak: json['longestStreak'] ?? 0,
+      // Handle both 'lastActiveDate' and 'lastLoginDate' for compatibility
       lastActiveDate: json['lastActiveDate'] != null
           ? (json['lastActiveDate'] as Timestamp).toDate()
           : json['lastLoginDate'] != null
               ? (json['lastLoginDate'] as Timestamp).toDate()
               : null,
+      // Support both 'createdAt' and 'joinDate' field names
       createdAt: json['createdAt'] != null
           ? (json['createdAt'] as Timestamp).toDate()
           : json['joinDate'] != null
@@ -122,6 +137,7 @@ class UserModel {
       featuredAchievements:
           List<String>.from(json['featuredAchievements'] ?? []),
       completedChallenges: List<String>.from(json['completedChallenges'] ?? []),
+      // Provide default privacy settings if not present
       privacySettings: Map<String, dynamic>.from(json['privacySettings'] ??
           {
             'showEmail': false,
@@ -138,14 +154,16 @@ class UserModel {
     );
   }
 
+  // Convert to JSON for Firestore storage
+  // Maintains backward compatibility by storing duplicate fields
   Map<String, dynamic> toJson() {
-    // Convert progress map
+    // Convert progress map back to JSON
     Map<String, dynamic> progressJson = {};
     progress.forEach((key, value) {
       progressJson[key] = value.toJson();
     });
 
-    // Convert activity data
+    // Convert activity data - DateTime objects to ISO strings
     Map<String, dynamic> activityJson = {};
     activityData.forEach((key, value) {
       activityJson[key.toIso8601String()] = value;
@@ -162,16 +180,16 @@ class UserModel {
       'country': country,
       'learningGoal': learningGoal,
       'totalXP': totalXP,
-      'xp': totalXP, // For backward compatibility
+      'xp': totalXP, // Duplicate field for backward compatibility
       'level': level,
       'currentStreak': currentStreak,
       'longestStreak': longestStreak,
       'lastActiveDate':
           lastActiveDate != null ? Timestamp.fromDate(lastActiveDate!) : null,
-      'lastLoginDate':
+      'lastLoginDate': // Duplicate field for backward compatibility
           lastActiveDate != null ? Timestamp.fromDate(lastActiveDate!) : null,
       'createdAt': Timestamp.fromDate(createdAt),
-      'joinDate': Timestamp.fromDate(createdAt),
+      'joinDate': Timestamp.fromDate(createdAt), // Duplicate for compatibility
       'completedCourses': completedCourses,
       'enrolledCourses': enrolledCourses,
       'progress': progressJson,
@@ -190,6 +208,8 @@ class UserModel {
   // Convert to Firestore format (same as toJson)
   Map<String, dynamic> toFirestore() => toJson();
 
+  // Create a copy with updated fields
+  // Essential for state management when updating user data
   UserModel copyWith({
     String? id,
     String? uid,
@@ -251,6 +271,7 @@ class UserModel {
   }
 
   // Helper method to calculate level from XP
+  // Uses a progressive scale where each level requires more XP
   static int calculateLevel(int xp) {
     // Simple level calculation - adjust as needed
     if (xp < 100) return 1;
@@ -262,6 +283,6 @@ class UserModel {
     if (xp < 4000) return 7;
     if (xp < 6000) return 8;
     if (xp < 9000) return 9;
-    return 10;
+    return 10; // Max level cap at 10
   }
 }
