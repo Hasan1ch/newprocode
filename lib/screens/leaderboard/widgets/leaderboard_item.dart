@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:procode/models/leaderboard_entry_model.dart';
 import 'package:procode/config/theme.dart';
 
+/// Individual leaderboard entry widget displaying user ranking and stats
+/// Highlights current user's entry with special styling
 class LeaderboardItem extends StatelessWidget {
   final LeaderboardEntry entry;
   final int rank;
@@ -21,10 +23,12 @@ class LeaderboardItem extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
+        // Special gradient for current user to make them stand out
         gradient: isCurrentUser
             ? LinearGradient(
                 colors: isDark
                     ? [
+                        // Subtle gradient in dark mode
                         AppTheme.primaryGradient.colors[0].withOpacity(0.2),
                         AppTheme.primaryGradient.colors[1].withOpacity(0.2),
                       ]
@@ -35,6 +39,7 @@ class LeaderboardItem extends StatelessWidget {
             : null,
         color: !isCurrentUser ? Theme.of(context).colorScheme.surface : null,
         borderRadius: BorderRadius.circular(12),
+        // Shadow effect for depth
         boxShadow: [
           BoxShadow(
             color: (isCurrentUser && !isDark
@@ -50,14 +55,14 @@ class LeaderboardItem extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
-            // Could navigate to user profile in future
+            // TODO: Navigate to user profile screen
           },
           borderRadius: BorderRadius.circular(12),
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Row(
               children: [
-                // Rank
+                // Rank indicator with special styling for top 3
                 Container(
                   width: 50,
                   height: 50,
@@ -86,7 +91,7 @@ class LeaderboardItem extends StatelessWidget {
                 ),
                 const SizedBox(width: 12),
 
-                // Avatar
+                // User avatar with fallback to initial
                 CircleAvatar(
                   radius: 20,
                   backgroundImage: entry.avatarUrl != null
@@ -106,7 +111,7 @@ class LeaderboardItem extends StatelessWidget {
                 ),
                 const SizedBox(width: 12),
 
-                // Username
+                // Username with overflow handling
                 Expanded(
                   child: Text(
                     entry.username,
@@ -121,10 +126,10 @@ class LeaderboardItem extends StatelessWidget {
                   ),
                 ),
 
-                // Stats
+                // Stats section: streak, level, and XP
                 Row(
                   children: [
-                    // Streak
+                    // Streak indicator (only shown if user has active streak)
                     if (entry.currentStreak > 0) ...[
                       Icon(
                         Icons.local_fire_department,
@@ -147,7 +152,7 @@ class LeaderboardItem extends StatelessWidget {
                       const SizedBox(width: 12),
                     ],
 
-                    // Level Badge
+                    // Level badge with color coding
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8,
@@ -170,7 +175,7 @@ class LeaderboardItem extends StatelessWidget {
                     ),
                     const SizedBox(width: 12),
 
-                    // XP
+                    // XP display
                     Row(
                       children: [
                         Icon(
@@ -203,36 +208,39 @@ class LeaderboardItem extends StatelessWidget {
     );
   }
 
+  /// Returns appropriate icon for top 3 ranks
   IconData _getRankIcon(int rank) {
     switch (rank) {
       case 1:
-        return Icons.emoji_events;
+        return Icons.emoji_events; // Trophy for first place
       case 2:
-        return Icons.military_tech;
+        return Icons.military_tech; // Medal for second place
       case 3:
-        return Icons.grade;
+        return Icons.grade; // Star for third place
       default:
         return Icons.star;
     }
   }
 
+  /// Returns color theme for different ranks
   Color _getRankColor(int rank) {
     switch (rank) {
       case 1:
-        return Colors.amber;
+        return Colors.amber; // Gold
       case 2:
-        return Colors.grey;
+        return Colors.grey; // Silver
       case 3:
-        return Colors.brown;
+        return Colors.brown; // Bronze
       default:
         return Colors.blue;
     }
   }
 
+  /// Returns color based on user level for visual progression
   Color _getLevelColor(int level) {
-    if (level >= 7) return Colors.purple;
-    if (level >= 5) return Colors.indigo;
-    if (level >= 3) return Colors.blue;
-    return Colors.green;
+    if (level >= 7) return Colors.purple; // Expert level
+    if (level >= 5) return Colors.indigo; // Advanced level
+    if (level >= 3) return Colors.blue; // Intermediate level
+    return Colors.green; // Beginner level
   }
 }
