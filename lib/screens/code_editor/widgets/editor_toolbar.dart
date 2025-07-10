@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+/// Toolbar for code editor configuration
+/// Provides controls for language, theme, font size, and editor settings
 class EditorToolbar extends StatelessWidget {
   final String selectedLanguage;
   final String selectedTheme;
@@ -41,7 +43,7 @@ class EditorToolbar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Language Selector
+          // Language Selector - changes syntax highlighting
           _buildDropdown(
             icon: Icons.code,
             value: selectedLanguage,
@@ -51,7 +53,7 @@ class EditorToolbar extends StatelessWidget {
           ),
           SizedBox(width: 16),
 
-          // Theme Selector
+          // Theme Selector - changes editor color scheme
           _buildDropdown(
             icon: Icons.palette,
             value: selectedTheme,
@@ -61,7 +63,7 @@ class EditorToolbar extends StatelessWidget {
           ),
           SizedBox(width: 16),
 
-          // Font Size
+          // Font Size Control
           _buildFontSizeControl(),
           SizedBox(width: 16),
 
@@ -85,7 +87,7 @@ class EditorToolbar extends StatelessWidget {
 
           Spacer(),
 
-          // Settings
+          // Settings button for advanced options
           IconButton(
             icon: Icon(Icons.settings),
             onPressed: () {
@@ -99,6 +101,7 @@ class EditorToolbar extends StatelessWidget {
     );
   }
 
+  /// Build dropdown selector widget
   Widget _buildDropdown({
     required IconData icon,
     required String value,
@@ -144,6 +147,8 @@ class EditorToolbar extends StatelessWidget {
     );
   }
 
+  /// Build font size adjustment control
+  /// Allows increasing/decreasing font size between 10-24
   Widget _buildFontSizeControl() {
     return Container(
       height: 32,
@@ -181,6 +186,8 @@ class EditorToolbar extends StatelessWidget {
     );
   }
 
+  /// Show editor settings dialog
+  /// Provides access to keyboard shortcuts and advanced features
   void _showSettingsDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -230,6 +237,8 @@ class EditorToolbar extends StatelessWidget {
     );
   }
 
+  /// Show keyboard shortcuts reference
+  /// Displays common editor shortcuts for productivity
   void _showKeyboardShortcuts(BuildContext context) {
     showDialog(
       context: context,
@@ -264,6 +273,7 @@ class EditorToolbar extends StatelessWidget {
     );
   }
 
+  /// Build individual keyboard shortcut display
   Widget _buildShortcut(String action, String keys) {
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 8),
