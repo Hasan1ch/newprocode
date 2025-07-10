@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:procode/providers/leaderboard_provider.dart';
 
+/// Filter chips for switching between global and course-specific leaderboards
+/// Provides quick filtering options with course selection modal
 class FilterChips extends StatelessWidget {
   final LeaderboardFilter currentFilter;
   final Function(LeaderboardFilter, {String? courseId}) onFilterChanged;
@@ -19,6 +21,7 @@ class FilterChips extends StatelessWidget {
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: [
+          // Global leaderboard filter
           FilterChip(
             label: const Text('Global'),
             selected: currentFilter == LeaderboardFilter.global,
@@ -27,19 +30,23 @@ class FilterChips extends StatelessWidget {
                 onFilterChanged(LeaderboardFilter.global);
               }
             },
+            // Show check icon when selected, otherwise show globe icon
             avatar: currentFilter == LeaderboardFilter.global
                 ? const Icon(Icons.check, size: 18)
                 : const Icon(Icons.public, size: 18),
           ),
           const SizedBox(width: 8),
+          // Course-specific leaderboard filter
           FilterChip(
             label: const Text('By Course'),
             selected: currentFilter == LeaderboardFilter.byCourse,
             onSelected: (selected) {
               if (selected) {
+                // Show course selection modal when selected
                 _showCourseSelection(context);
               }
             },
+            // Show check icon when selected, otherwise show school icon
             avatar: currentFilter == LeaderboardFilter.byCourse
                 ? const Icon(Icons.check, size: 18)
                 : const Icon(Icons.school, size: 18),
@@ -49,6 +56,8 @@ class FilterChips extends StatelessWidget {
     );
   }
 
+  /// Shows bottom sheet modal for course selection
+  /// This allows users to filter leaderboard by specific courses
   void _showCourseSelection(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -66,7 +75,8 @@ class FilterChips extends StatelessWidget {
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 16),
-            // TODO: Replace with actual course list from provider
+            // TODO: Replace with dynamic course list from CourseProvider
+            // Currently showing hardcoded courses for demonstration
             ListTile(
               leading: const Icon(Icons.code),
               title: const Text('Python Basics'),
