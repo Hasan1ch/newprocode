@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:procode/config/theme.dart';
 
+/// Animated pie chart widget that displays quiz results
+/// Shows the percentage of correct vs wrong answers with smooth animations
 class ResultChart extends StatefulWidget {
   final int correctAnswers;
   final int wrongAnswers;
@@ -24,6 +26,8 @@ class _ResultChartState extends State<ResultChart>
   @override
   void initState() {
     super.initState();
+    // Create smooth animation for pie chart entrance
+    // Makes the chart feel more dynamic and engaging
     _controller = AnimationController(
       duration: const Duration(milliseconds: 1500),
       vsync: this,
@@ -34,9 +38,10 @@ class _ResultChartState extends State<ResultChart>
       end: 1,
     ).animate(CurvedAnimation(
       parent: _controller,
-      curve: Curves.easeInOutCubic,
+      curve: Curves.easeInOutCubic, // Smooth acceleration and deceleration
     ));
 
+    // Start the animation immediately when widget loads
     _controller.forward();
   }
 
@@ -49,6 +54,7 @@ class _ResultChartState extends State<ResultChart>
   @override
   Widget build(BuildContext context) {
     final total = widget.correctAnswers + widget.wrongAnswers;
+    // Don't render chart if no questions were answered
     if (total == 0) {
       return const SizedBox.shrink();
     }
@@ -60,36 +66,44 @@ class _ResultChartState extends State<ResultChart>
           PieChartData(
             pieTouchData: PieTouchData(
               touchCallback: (FlTouchEvent event, pieTouchResponse) {
+                // Rebuild on touch to show interactive feedback
                 setState(() {});
               },
             ),
             borderData: FlBorderData(show: false),
-            sectionsSpace: 2,
-            centerSpaceRadius: 50,
+            sectionsSpace: 2, // Small gap between sections for clarity
+            centerSpaceRadius: 50, // Creates a donut chart effect
             sections: _showingSections(),
-            startDegreeOffset: -90,
+            startDegreeOffset: -90, // Start from top instead of right
           ),
         );
       },
     );
   }
 
+  /// Generates the pie chart sections with animations
+  /// Each section represents correct or wrong answers
   List<PieChartSectionData> _showingSections() {
     final total = widget.correctAnswers + widget.wrongAnswers;
     final correctPercentage = (widget.correctAnswers / total * 100).round();
     final wrongPercentage = (widget.wrongAnswers / total * 100).round();
 
     return [
+      // Correct answers section - always shown
       PieChartSectionData(
         color: AppTheme.success,
-        value: widget.correctAnswers.toDouble() * _animation.value,
-        title: _animation.value > 0.5 ? '$correctPercentage%' : '',
+        value: widget.correctAnswers.toDouble() *
+            _animation.value, // Animate growth
+        title: _animation.value > 0.5
+            ? '$correctPercentage%'
+            : '', // Show % after halfway
         radius: 50,
         titleStyle: const TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.bold,
           color: Colors.white,
         ),
+        // Add badge icon after animation is mostly complete
         badgeWidget: _animation.value > 0.8
             ? Container(
                 padding: const EdgeInsets.all(8),
@@ -111,8 +125,9 @@ class _ResultChartState extends State<ResultChart>
                 ),
               )
             : null,
-        badgePositionPercentageOffset: 1.1,
+        badgePositionPercentageOffset: 1.1, // Position badge outside the chart
       ),
+      // Wrong answers section - only show if there are wrong answers
       if (widget.wrongAnswers > 0)
         PieChartSectionData(
           color: AppTheme.error,
@@ -151,6 +166,8 @@ class _ResultChartState extends State<ResultChart>
   }
 }
 
+/// Line chart widget that shows quiz score progression over time
+/// Helps users visualize their learning progress
 class QuizProgressChart extends StatelessWidget {
   final List<double> scores;
   final List<String> dates;
@@ -163,6 +180,7 @@ class QuizProgressChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Don't render if no data available
     if (scores.isEmpty || dates.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -172,10 +190,11 @@ class QuizProgressChart extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       child: LineChart(
         LineChartData(
+          // Grid configuration for better readability
           gridData: FlGridData(
             show: true,
             drawVerticalLine: true,
-            horizontalInterval: 20,
+            horizontalInterval: 20, // Lines every 20%
             verticalInterval: 1,
             getDrawingHorizontalLine: (value) {
               return FlLine(
@@ -190,20 +209,24 @@ class QuizProgressChart extends StatelessWidget {
               );
             },
           ),
+          // Axis titles configuration
           titlesData: FlTitlesData(
             show: true,
+            // Hide right and top titles for cleaner look
             rightTitles: AxisTitles(
               sideTitles: SideTitles(showTitles: false),
             ),
             topTitles: AxisTitles(
               sideTitles: SideTitles(showTitles: false),
             ),
+            // Bottom axis shows dates
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
                 reservedSize: 30,
                 interval: 1,
                 getTitlesWidget: (value, meta) {
+                  // Only show dates that exist in our data
                   if (value.toInt() >= 0 && value.toInt() < dates.length) {
                     return Padding(
                       padding: const EdgeInsets.only(top: 8),
@@ -220,10 +243,11 @@ class QuizProgressChart extends StatelessWidget {
                 },
               ),
             ),
+            // Left axis shows percentage scores
             leftTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                interval: 20,
+                interval: 20, // Show 0%, 20%, 40%, 60%, 80%, 100%
                 reservedSize: 42,
                 getTitlesWidget: (value, meta) {
                   return Text(
@@ -237,20 +261,25 @@ class QuizProgressChart extends StatelessWidget {
               ),
             ),
           ),
+          // Chart border for definition
           borderData: FlBorderData(
             show: true,
             border: Border.all(color: AppTheme.border),
           ),
+          // Chart bounds
           minX: 0,
           maxX: scores.length - 1.0,
           minY: 0,
-          maxY: 100,
+          maxY: 100, // Percentage scale
+          // Main line data
           lineBarsData: [
             LineChartBarData(
+              // Convert score list to chart points
               spots: scores.asMap().entries.map((entry) {
                 return FlSpot(entry.key.toDouble(), entry.value);
               }).toList(),
-              isCurved: true,
+              isCurved: true, // Smooth curve for better aesthetics
+              // Gradient line for visual appeal
               gradient: LinearGradient(
                 colors: [
                   AppTheme.primary,
@@ -259,6 +288,7 @@ class QuizProgressChart extends StatelessWidget {
               ),
               barWidth: 3,
               isStrokeCapRound: true,
+              // Show dots at each data point
               dotData: FlDotData(
                 show: true,
                 getDotPainter: (spot, percent, barData, index) {
@@ -266,10 +296,11 @@ class QuizProgressChart extends StatelessWidget {
                     radius: 4,
                     color: AppTheme.primary,
                     strokeWidth: 2,
-                    strokeColor: Colors.white,
+                    strokeColor: Colors.white, // White border for contrast
                   );
                 },
               ),
+              // Fill area under the line with gradient
               belowBarData: BarAreaData(
                 show: true,
                 gradient: LinearGradient(
