@@ -4,15 +4,17 @@ import 'package:procode/models/code_challenge_model.dart';
 import 'package:procode/services/judge0_service.dart';
 import 'package:procode/services/gamification_service.dart';
 
-// Add type alias at the top of the file
+// Type alias for cleaner code
 typedef CodeChallenge = CodeChallengeModel;
 
+/// Service for managing code challenges and user submissions
+/// Handles code execution, validation, and progress tracking
 class CodeEditorService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final Judge0Service _judge0Service = Judge0Service();
   final GamificationService _gamificationService = GamificationService();
 
-  // Get a specific code challenge
+  /// Retrieves a specific code challenge by ID
   Future<CodeChallenge?> getCodeChallenge(String challengeId) async {
     try {
       final doc =
@@ -28,7 +30,7 @@ class CodeEditorService {
     }
   }
 
-  // Get all code challenges for a specific language
+  /// Gets all code challenges filtered by language and difficulty
   Future<List<CodeChallenge>> getCodeChallenges({
     String? language,
     String? difficulty,
@@ -36,6 +38,7 @@ class CodeEditorService {
     try {
       Query query = _firestore.collection('challenges');
 
+      // Apply filters if specified
       if (language != null && language != 'All') {
         query = query.where('language', isEqualTo: language);
       }
@@ -57,7 +60,8 @@ class CodeEditorService {
     }
   }
 
-  // Submit code solution with actual execution
+  /// Submits user's code solution and runs it against test cases
+  /// Returns results including test case outcomes and XP earned
   Future<Map<String, dynamic>> submitSolution({
     required String userId,
     required String challengeId,
@@ -65,7 +69,7 @@ class CodeEditorService {
     required String language,
   }) async {
     try {
-      // Get the challenge details
+      // Get the challenge to access test cases
       final challenge = await getCodeChallenge(challengeId);
       if (challenge == null) {
         throw Exception('Challenge not found');
@@ -79,13 +83,14 @@ class CodeEditorService {
         final testCase = challenge.testCases[i];
 
         try {
-          // Execute code with Judge0 or Piston
+          // Execute code with Piston API (Judge0 alternative)
           final result = await _judge0Service.executeCodeWithPiston(
             code: code,
             language: language,
             stdin: testCase.input,
           );
 
+          // Compare output with expected result
           final actualOutput = (result['stdout'] ?? '').trim();
           final expectedOutput = testCase.expectedOutput.trim();
           final passed = actualOutput == expectedOutput;
@@ -100,6 +105,7 @@ class CodeEditorService {
             'executionTime': result['time'],
           });
         } catch (e) {
+          // Handle execution errors (syntax errors, runtime errors, etc.)
           allPassed = false;
           testResults.add({
             'testCase': testCase.description,
@@ -109,7 +115,7 @@ class CodeEditorService {
         }
       }
 
-      // Save submission to Firestore
+      // Save submission to database for history
       final submission = await _firestore.collection('submissions').add({
         'userId': userId,
         'challengeId': challengeId,
@@ -120,16 +126,16 @@ class CodeEditorService {
         'timestamp': FieldValue.serverTimestamp(),
       });
 
-      // If all tests passed, award XP and update progress
+      // Award XP and update progress if all tests passed
       if (allPassed) {
         await _gamificationService.awardXP(userId, challenge.xpReward);
 
-        // Update user's completed challenges
+        // Mark challenge as completed
         await _firestore.collection('users').doc(userId).update({
           'completedChallenges': FieldValue.arrayUnion([challengeId]),
         });
 
-        // Check for achievements related to challenges
+        // Check for challenge-related achievements
         await _gamificationService.checkAndAwardAchievements(
           userId,
           'challenges_completed',
@@ -152,14 +158,14 @@ class CodeEditorService {
     }
   }
 
-  // Get user's submission history
+  /// Gets user's submission history for review and learning
   Future<List<Map<String, dynamic>>> getUserSubmissions(String userId) async {
     try {
       final snapshot = await _firestore
           .collection('submissions')
           .where('userId', isEqualTo: userId)
           .orderBy('timestamp', descending: true)
-          .limit(50)
+          .limit(50) // Limit to last 50 submissions
           .get();
 
       return snapshot.docs.map((doc) {
@@ -173,7 +179,8 @@ class CodeEditorService {
     }
   }
 
-  // Get code templates for different languages
+  /// Provides language-specific code templates for challenges
+  /// Helps users get started with proper input/output handling
   Map<String, String> getCodeTemplates() {
     return {
       'Python': '''def solution(input_data):
@@ -247,7 +254,7 @@ int main() {
     };
   }
 
-  // Get code snippets for autocomplete
+  /// Gets code snippets for autocomplete functionality
   Future<List<Map<String, dynamic>>> getCodeSnippets(String language) async {
     try {
       final snapshot = await _firestore
@@ -262,7 +269,7 @@ int main() {
     }
   }
 
-  // Save user's code progress (draft)
+  /// Saves user's code as a draft to prevent loss of work
   Future<void> saveCodeDraft({
     required String userId,
     required String challengeId,
@@ -283,7 +290,7 @@ int main() {
     }
   }
 
-  // Get user's saved code draft
+  /// Retrieves user's saved draft for a challenge
   Future<String?> getCodeDraft(String userId, String challengeId) async {
     try {
       final doc = await _firestore
@@ -301,15 +308,16 @@ int main() {
     }
   }
 
-  // Get daily coding challenge
+  /// Gets or generates the daily coding challenge
+  /// Provides consistent daily practice opportunity
   Future<CodeChallenge?> getDailyChallenge() async {
     try {
-      // Get today's date string
+      // Generate today's date string for consistent daily challenge
       final today = DateTime.now();
       final dateString =
           '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
 
-      // Check if daily challenge exists for today
+      // Check if daily challenge already selected for today
       final dailyDoc =
           await _firestore.collection('daily_challenges').doc(dateString).get();
 
@@ -318,13 +326,14 @@ int main() {
         return await getCodeChallenge(challengeId);
       }
 
-      // If no daily challenge, select a random easy/medium challenge
+      // No daily challenge set - select a random easy/medium challenge
       final challenges = await getCodeChallenges();
       final eligibleChallenges = challenges
           .where((c) => c.difficulty == 'Easy' || c.difficulty == 'Medium')
           .toList();
 
       if (eligibleChallenges.isNotEmpty) {
+        // Use date-based random selection for consistency
         final random = eligibleChallenges[
             DateTime.now().millisecondsSinceEpoch % eligibleChallenges.length];
 
