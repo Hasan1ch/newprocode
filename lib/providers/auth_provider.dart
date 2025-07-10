@@ -9,7 +9,7 @@ import 'package:provider/provider.dart';
 import 'package:procode/providers/user_provider.dart';
 import 'package:procode/providers/course_provider.dart';
 
-// Add AuthStatus enum
+// Authentication states for managing UI flow
 enum AuthStatus {
   uninitialized,
   authenticated,
@@ -17,18 +17,21 @@ enum AuthStatus {
   unauthenticated,
 }
 
+/// Central authentication provider managing user authentication state
+/// Handles sign in/up, Google auth, email verification, and session management
 class AuthProvider extends ChangeNotifier {
   final AuthService _authService = AuthService();
   final DatabaseService _databaseService = DatabaseService();
   final GoogleSignIn _googleSignIn = GoogleSignIn();
 
+  // Authentication state properties
   User? _firebaseUser;
   UserModel? _user;
   bool _isLoading = false;
   String? _error;
   AuthStatus _status = AuthStatus.uninitialized;
 
-  // Getters
+  // Getters for UI binding
   User? get firebaseUser => _firebaseUser;
   UserModel? get user => _user;
   bool get isLoading => _isLoading;
@@ -37,19 +40,22 @@ class AuthProvider extends ChangeNotifier {
   bool get isEmailVerified => _firebaseUser?.emailVerified ?? false;
   AuthStatus get status => _status;
 
-  // Constructor
+  // Constructor initializes auth state listener
   AuthProvider() {
     _init();
   }
 
   // Initialize auth state listener
+  // Monitors Firebase auth changes and syncs with Firestore user data
   void _init() {
     _authService.authStateChanges.listen((User? user) async {
       _firebaseUser = user;
       if (user != null) {
+        // User signed in - load their profile data
         await _loadUserData(user.uid);
         _updateAuthStatus();
       } else {
+        // User signed out - clear local data
         _user = null;
         _status = AuthStatus.unauthenticated;
       }
@@ -58,6 +64,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // Update auth status based on current state
+  // Determines which screen to show (login, email verification, or main app)
   void _updateAuthStatus() {
     if (_firebaseUser == null) {
       _status = AuthStatus.unauthenticated;
@@ -69,6 +76,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // Check auth state method for splash screen
+  // Reloads user data to ensure latest verification status
   Future<void> checkAuthState() async {
     try {
       _status = AuthStatus.uninitialized;
@@ -100,11 +108,12 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // Load user data from Firestore
+  // Syncs Firebase Auth user with app-specific user profile
   Future<void> _loadUserData(String uid) async {
     try {
       _user = await _databaseService.getUser(uid);
       if (_user != null) {
-        // Update last login date
+        // Update last login date for streak tracking
         await _databaseService.updateLastLoginDate(uid);
       }
     } catch (e) {
@@ -113,6 +122,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // Sign up with email and password
+  // Creates Firebase account and initializes user profile
   Future<bool> signUp({
     required String email,
     required String password,
@@ -124,7 +134,7 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Check username availability
+      // Check username availability first
       bool isAvailable =
           await _databaseService.checkUsernameAvailability(username);
       if (!isAvailable) {
@@ -139,10 +149,10 @@ class AuthProvider extends ChangeNotifier {
           await _authService.signUp(email: email, password: password);
 
       if (credential.user != null) {
-        // Reserve username
+        // Reserve username to prevent duplicates
         await _databaseService.reserveUsername(username, credential.user!.uid);
 
-        // Create user profile in Firestore
+        // Create initial user profile with default values
         final newUser = UserModel(
           id: credential.user!.uid,
           email: email,
@@ -218,26 +228,28 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // Sign in with Google
+  // Handles both new and existing Google users
   Future<bool> signInWithGoogle() async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      // Trigger Google Sign In
+      // Trigger Google Sign In flow
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
 
       if (googleUser == null) {
+        // User cancelled the sign in
         _isLoading = false;
         notifyListeners();
         return false;
       }
 
-      // Get auth details
+      // Get auth details from Google
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
 
-      // Create credential
+      // Create Firebase credential
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
@@ -248,16 +260,16 @@ class AuthProvider extends ChangeNotifier {
           await FirebaseAuth.instance.signInWithCredential(credential);
 
       if (userCredential.user != null) {
-        // Check if user exists in Firestore
+        // Check if this is a new user
         final existingUser =
             await _databaseService.getUser(userCredential.user!.uid);
 
         if (existingUser == null) {
-          // Create new user profile
+          // New Google user - create profile
           final username = userCredential.user!.email!.split('@')[0];
           final displayName = userCredential.user!.displayName ?? username;
 
-          // Check if username is available, if not, append numbers
+          // Generate unique username if needed
           String finalUsername = username;
           int counter = 1;
           while (!await _databaseService
@@ -269,6 +281,7 @@ class AuthProvider extends ChangeNotifier {
           await _databaseService.reserveUsername(
               finalUsername, userCredential.user!.uid);
 
+          // Create user profile with Google account info
           final newUser = UserModel(
             id: userCredential.user!.uid,
             email: userCredential.user!.email!,
@@ -318,6 +331,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // Sign out with proper cleanup
+  // Clears all user data from providers before signing out
   Future<void> signOut({BuildContext? context}) async {
     try {
       // Clear providers data before signing out
@@ -332,11 +346,11 @@ class AuthProvider extends ChangeNotifier {
         courseProvider.clearUserData();
       }
 
-      // Sign out from Firebase
+      // Sign out from Firebase and Google
       await _authService.signOut();
       await _googleSignIn.signOut();
 
-      // Clear local data
+      // Clear local authentication data
       _user = null;
       _firebaseUser = null;
       _status = AuthStatus.unauthenticated;
@@ -382,6 +396,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // Update user profile
+  // Updates both Firestore document and local state
   Future<bool> updateUserProfile(Map<String, dynamic> updates) async {
     if (_user == null) return false;
 
@@ -404,13 +419,14 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  // Clear error
+  // Clear error message
   void clearError() {
     _error = null;
     notifyListeners();
   }
 
   // ====== Wrapper methods for compatibility with auth screens ======
+  // These methods provide alternative names for consistency with UI code
 
   // Login method (wrapper for signIn)
   Future<bool> login({
@@ -418,7 +434,7 @@ class AuthProvider extends ChangeNotifier {
     required String password,
     bool rememberMe = false,
   }) async {
-    // Save email if rememberMe is true
+    // Save email for auto-fill if rememberMe is true
     if (rememberMe) {
       await _authService.saveEmail(email);
     }
@@ -460,7 +476,7 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  // Get saved email
+  // Get saved email for remember me feature
   Future<String?> getSavedEmail() async {
     try {
       return await _authService.getSavedEmail();
@@ -474,6 +490,7 @@ class AuthProvider extends ChangeNotifier {
   User? get currentUser => _firebaseUser;
 
   // Check email verification (returns bool)
+  // Forces reload to get latest verification status
   Future<bool> checkEmailVerification() async {
     try {
       await _firebaseUser?.reload();
