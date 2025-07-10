@@ -5,6 +5,8 @@ import 'package:procode/providers/course_provider.dart';
 import 'package:procode/providers/auth_provider.dart' as app_auth;
 import 'package:procode/screens/courses/widgets/module_card.dart';
 
+/// Detailed course view screen showing course information, progress, and modules
+/// Allows users to enroll in courses and track their learning progress
 class CourseDetailScreen extends StatefulWidget {
   final models.Course course;
 
@@ -21,6 +23,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
   @override
   void initState() {
     super.initState();
+    // Load course modules after the widget is built to avoid provider issues
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<CourseProvider>().loadModulesForCourse(widget.course.id);
     });
@@ -28,10 +31,13 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Watch providers for reactive UI updates
     final courseProvider = context.watch<CourseProvider>();
     final authProvider = context.watch<app_auth.AuthProvider>();
+
+    // Get course-specific data from the provider
     final modules = courseProvider.getModulesForCourse(widget.course.id);
-    print('Modules loaded: ${modules.length}');
+    print('Modules loaded: ${modules.length}'); // Debug logging
     final progress = courseProvider.getProgressForCourse(widget.course.id);
     final isEnrolled =
         courseProvider.enrolledCourses.any((c) => c.id == widget.course.id);
@@ -45,13 +51,14 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
       backgroundColor: theme.colorScheme.surface,
       body: CustomScrollView(
         slivers: [
-          // Custom App Bar with Hero Image
+          // Collapsible header with course information
           SliverAppBar(
             expandedHeight: 250,
             pinned: true,
             backgroundColor: theme.colorScheme.surfaceContainerHighest,
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
+                // Language-specific gradient background
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
@@ -70,6 +77,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
+                        // Course icon with language abbreviation
                         Container(
                           width: 60,
                           height: 60,
@@ -91,6 +99,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                           ),
                         ),
                         const SizedBox(height: 16),
+                        // Course title
                         Text(
                           widget.course.title,
                           style: const TextStyle(
@@ -100,8 +109,10 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                           ),
                         ),
                         const SizedBox(height: 8),
+                        // Course metadata row
                         Row(
                           children: [
+                            // Difficulty indicator
                             Icon(
                               Icons.signal_cellular_alt,
                               color: Colors.white.withValues(alpha: 0.8),
@@ -116,6 +127,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                               ),
                             ),
                             const SizedBox(width: 16),
+                            // Estimated duration
                             Icon(
                               Icons.timer_outlined,
                               color: Colors.white.withValues(alpha: 0.8),
@@ -137,19 +149,20 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                 ),
               ),
             ),
+            // Custom back button for better visibility
             leading: IconButton(
               icon: const Icon(Icons.arrow_back, color: Colors.white),
               onPressed: () => Navigator.pop(context),
             ),
           ),
-          // Course Info
+          // Course content section
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Description
+                  // Course description
                   Text(
                     widget.course.description,
                     style: theme.textTheme.bodyLarge?.copyWith(
@@ -158,8 +171,9 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  // Stats
+                  // Different UI based on enrollment status
                   if (isEnrolled) ...[
+                    // Progress tracking card for enrolled students
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -168,6 +182,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                       ),
                       child: Column(
                         children: [
+                          // Overall progress header
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -188,6 +203,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                             ],
                           ),
                           const SizedBox(height: 12),
+                          // Visual progress bar
                           ClipRRect(
                             borderRadius: BorderRadius.circular(4),
                             child: LinearProgressIndicator(
@@ -200,6 +216,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                             ),
                           ),
                           const SizedBox(height: 12),
+                          // Course statistics grid
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceAround,
                             children: [
@@ -225,10 +242,11 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                     ),
                     const SizedBox(height: 24),
                   ] else ...[
-                    // Enroll Button
+                    // Enrollment button for non-enrolled users
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
+                        // Only allow enrollment if user is authenticated
                         onPressed: authProvider.isAuthenticated
                             ? () async {
                                 await courseProvider
@@ -263,7 +281,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                     ),
                     const SizedBox(height: 24),
                   ],
-                  // Modules
+                  // Modules section header
                   Text(
                     'Course Modules',
                     style: theme.textTheme.headlineSmall?.copyWith(
@@ -275,11 +293,12 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
               ),
             ),
           ),
-          // Modules List
+          // Dynamic module list
           SliverList(
             delegate: SliverChildBuilderDelegate(
               (context, index) {
                 final module = modules[index];
+                // Calculate module-specific progress
                 final isCompleted =
                     progress?.completedModules.contains(module.id) ?? false;
                 final completedLessons = progress?.completedLessons
@@ -297,6 +316,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                     isCompleted: isCompleted,
                     completedLessons: completedLessons,
                     totalLessons: module.lessonIds.length,
+                    // Lock modules after the first one for non-enrolled users
                     isLocked: !isEnrolled && index > 0,
                   ),
                 );
@@ -304,12 +324,14 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
               childCount: modules.length,
             ),
           ),
+          // Bottom padding for better scrolling experience
           const SliverPadding(padding: EdgeInsets.only(bottom: 20)),
         ],
       ),
     );
   }
 
+  /// Builds a statistic item widget for the progress card
   Widget _buildStatItem(String value, String label, IconData icon) {
     final theme = Theme.of(context);
 
@@ -333,6 +355,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
     );
   }
 
+  /// Returns language-specific color for visual consistency
   Color _getCourseColor(String language) {
     switch (language.toLowerCase()) {
       case 'python':
