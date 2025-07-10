@@ -1,10 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:procode/config/firebase_config.dart';
 
+/// Analytics service for tracking user learning activities and progress
+/// Collects data for insights, progress tracking, and personalized recommendations
 class AnalyticsService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Track lesson view
+  /// Tracks when a user views a lesson
+  /// This helps understand engagement and popular content
   Future<void> trackLessonView({
     required String userId,
     required String courseId,
@@ -21,11 +24,13 @@ class AnalyticsService {
         'timestamp': FieldValue.serverTimestamp(),
       });
     } catch (e) {
+      // Log error but don't throw - analytics shouldn't break the app
       print('Error tracking lesson view: $e');
     }
   }
 
-  // Track lesson completion
+  /// Tracks lesson completion with time spent
+  /// Records XP earned and helps identify difficult lessons
   Future<void> trackLessonCompletion({
     required String userId,
     required String courseId,
@@ -41,7 +46,8 @@ class AnalyticsService {
         'moduleId': moduleId,
         'lessonId': lessonId,
         'timeSpentSeconds': timeSpentSeconds,
-        'xpEarned': FirebaseConfig.xpPerLesson,
+        'xpEarned':
+            FirebaseConfig.xpPerLesson, // Standard XP for lesson completion
         'timestamp': FieldValue.serverTimestamp(),
       });
     } catch (e) {
@@ -49,7 +55,8 @@ class AnalyticsService {
     }
   }
 
-  // Track quiz attempt
+  /// Tracks quiz attempts with performance metrics
+  /// Helps identify knowledge gaps and adjust difficulty
   Future<void> trackQuizAttempt({
     required String userId,
     required String courseId,
@@ -68,7 +75,8 @@ class AnalyticsService {
         'quizId': quizId,
         'score': score,
         'totalQuestions': totalQuestions,
-        'percentage': (score / totalQuestions) * 100,
+        'percentage': (score / totalQuestions) *
+            100, // Calculate percentage for easy analysis
         'timeSpentSeconds': timeSpentSeconds,
         'timestamp': FieldValue.serverTimestamp(),
       });
@@ -77,7 +85,8 @@ class AnalyticsService {
     }
   }
 
-  // Track course enrollment
+  /// Tracks when a user enrolls in a new course
+  /// Useful for understanding course popularity and user interests
   Future<void> trackCourseEnrollment({
     required String userId,
     required String courseId,
@@ -94,7 +103,8 @@ class AnalyticsService {
     }
   }
 
-  // Track achievement unlock
+  /// Tracks achievement unlocks for gamification insights
+  /// Helps understand which achievements motivate users
   Future<void> trackAchievementUnlock({
     required String userId,
     required String achievementId,
@@ -113,25 +123,28 @@ class AnalyticsService {
     }
   }
 
-  // Get user learning stats
+  /// Aggregates user learning statistics from the last 30 days
+  /// Provides insights for dashboard and progress tracking
   Future<Map<String, dynamic>> getUserLearningStats(String userId) async {
     try {
       final now = DateTime.now();
       final thirtyDaysAgo = now.subtract(const Duration(days: 30));
 
-      // Get events from last 30 days
+      // Query events from last 30 days for this user
       final eventsSnapshot = await _firestore
           .collection('analytics_events')
           .where('userId', isEqualTo: userId)
           .where('timestamp', isGreaterThan: thirtyDaysAgo)
           .get();
 
+      // Initialize counters
       int totalLessonsCompleted = 0;
       int totalQuizzesTaken = 0;
       int totalTimeSpent = 0;
       double averageQuizScore = 0;
       Set<String> activeDays = {};
 
+      // Process each event
       for (final doc in eventsSnapshot.docs) {
         final data = doc.data();
         final event = data['event'] as String;
@@ -145,12 +158,13 @@ class AnalyticsService {
           totalTimeSpent += (data['timeSpentSeconds'] ?? 0) as int;
         }
 
-        // Track active days
+        // Track unique active days
         final timestamp = (data['timestamp'] as Timestamp).toDate();
         final dayKey = '${timestamp.year}-${timestamp.month}-${timestamp.day}';
         activeDays.add(dayKey);
       }
 
+      // Calculate average quiz score
       if (totalQuizzesTaken > 0) {
         averageQuizScore /= totalQuizzesTaken;
       }
@@ -158,12 +172,13 @@ class AnalyticsService {
       return {
         'totalLessonsCompleted': totalLessonsCompleted,
         'totalQuizzesTaken': totalQuizzesTaken,
-        'totalTimeSpentMinutes': totalTimeSpent ~/ 60,
+        'totalTimeSpentMinutes': totalTimeSpent ~/ 60, // Convert to minutes
         'averageQuizScore': averageQuizScore.round(),
         'activeDaysLast30': activeDays.length,
       };
     } catch (e) {
       print('Error getting user stats: $e');
+      // Return empty stats on error
       return {
         'totalLessonsCompleted': 0,
         'totalQuizzesTaken': 0,
