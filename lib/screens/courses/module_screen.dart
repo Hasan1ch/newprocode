@@ -9,6 +9,8 @@ import 'package:procode/screens/courses/lesson_screen.dart';
 import 'package:procode/screens/quiz/quiz_intro_screen.dart';
 import 'package:procode/widgets/common/custom_app_bar.dart';
 
+/// Module detail screen showing all lessons within a course module
+/// Enforces sequential learning by locking lessons until previous ones are completed
 class ModuleScreen extends StatefulWidget {
   final String courseId;
   final models.Module module;
@@ -24,7 +26,7 @@ class ModuleScreen extends StatefulWidget {
 }
 
 class _ModuleScreenState extends State<ModuleScreen> {
-  List<models.Lesson> _lessons = [];
+  List<models.Lesson> _lessons = []; // All lessons in this module
   bool _isLoading = true;
 
   @override
@@ -33,6 +35,7 @@ class _ModuleScreenState extends State<ModuleScreen> {
     _loadLessons();
   }
 
+  /// Loads all lessons for the current module from the provider
   Future<void> _loadLessons() async {
     final courseProvider = context.read<CourseProvider>();
     final lessons = await courseProvider.loadLessonsForModule(
@@ -48,6 +51,7 @@ class _ModuleScreenState extends State<ModuleScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Watch course provider for progress updates
     final courseProvider = context.watch<CourseProvider>();
     final progress = courseProvider.getProgressForCourse(widget.courseId);
     final theme = Theme.of(context);
@@ -70,7 +74,7 @@ class _ModuleScreenState extends State<ModuleScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Module Description
+                  // Module overview card with description and time estimate
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
@@ -101,6 +105,7 @@ class _ModuleScreenState extends State<ModuleScreen> {
                           ],
                         ),
                         const SizedBox(height: 12),
+                        // Module description for context
                         Text(
                           widget.module.description,
                           style: theme.textTheme.bodyMedium?.copyWith(
@@ -109,6 +114,7 @@ class _ModuleScreenState extends State<ModuleScreen> {
                           ),
                         ),
                         const SizedBox(height: 12),
+                        // Time estimate helps students plan their learning
                         Row(
                           children: [
                             Icon(
@@ -129,7 +135,7 @@ class _ModuleScreenState extends State<ModuleScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  // Lessons
+                  // Lessons section
                   Text(
                     'Lessons',
                     style: theme.textTheme.headlineSmall?.copyWith(
@@ -137,10 +143,12 @@ class _ModuleScreenState extends State<ModuleScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
+                  // Generate lesson cards with proper locking logic
                   ...List.generate(_lessons.length, (index) {
                     final lesson = _lessons[index];
                     final isCompleted =
                         progress?.completedLessons.contains(lesson.id) ?? false;
+                    // Lock lessons if previous lesson isn't completed (except first lesson)
                     final isLocked = index > 0 &&
                         !isCompleted &&
                         !(progress?.completedLessons
@@ -158,7 +166,7 @@ class _ModuleScreenState extends State<ModuleScreen> {
                     );
                   }),
                   const SizedBox(height: 16),
-                  // Quiz Card
+                  // Module quiz (if available)
                   if (widget.module.quizId != null) ...[
                     Text(
                       'Module Quiz',
@@ -175,6 +183,7 @@ class _ModuleScreenState extends State<ModuleScreen> {
     );
   }
 
+  /// Builds individual lesson card with completion status and metadata
   Widget _buildLessonCard({
     required models.Lesson lesson,
     required int index,
@@ -187,6 +196,7 @@ class _ModuleScreenState extends State<ModuleScreen> {
       onTap: isLocked
           ? null
           : () {
+              // Navigate to lesson screen if unlocked
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -204,6 +214,7 @@ class _ModuleScreenState extends State<ModuleScreen> {
         decoration: BoxDecoration(
           color: theme.colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(12),
+          // Visual border indicators for lesson status
           border: Border.all(
             color: isCompleted
                 ? Colors.green.withValues(alpha: 0.3)
@@ -214,6 +225,7 @@ class _ModuleScreenState extends State<ModuleScreen> {
         ),
         child: Row(
           children: [
+            // Status icon container
             Container(
               width: 40,
               height: 40,
@@ -226,6 +238,7 @@ class _ModuleScreenState extends State<ModuleScreen> {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Center(
+                // Show different icons based on lesson status
                 child: isCompleted
                     ? const Icon(Icons.check, color: Colors.green, size: 20)
                     : isLocked
@@ -241,6 +254,7 @@ class _ModuleScreenState extends State<ModuleScreen> {
               ),
             ),
             const SizedBox(width: 16),
+            // Lesson information
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -253,8 +267,10 @@ class _ModuleScreenState extends State<ModuleScreen> {
                     ),
                   ),
                   const SizedBox(height: 4),
+                  // Lesson metadata row
                   Row(
                     children: [
+                      // Duration estimate
                       Icon(
                         Icons.timer_outlined,
                         color: theme.colorScheme.onSurfaceVariant,
@@ -268,6 +284,7 @@ class _ModuleScreenState extends State<ModuleScreen> {
                         ),
                       ),
                       const SizedBox(width: 12),
+                      // XP reward
                       const Icon(
                         Icons.bolt,
                         color: Colors.amber,
@@ -285,6 +302,7 @@ class _ModuleScreenState extends State<ModuleScreen> {
                 ],
               ),
             ),
+            // Navigation arrow
             Icon(
               Icons.arrow_forward_ios,
               color: isLocked
@@ -298,10 +316,13 @@ class _ModuleScreenState extends State<ModuleScreen> {
     );
   }
 
+  /// Builds the module quiz card that unlocks after all lessons are completed
   Widget _buildQuizCard() {
     final theme = Theme.of(context);
     final progress =
         context.watch<CourseProvider>().getProgressForCourse(widget.courseId);
+
+    // Quiz is only available after completing all module lessons
     final allLessonsCompleted = widget.module.lessonIds.every(
       (lessonId) => progress?.completedLessons.contains(lessonId) ?? false,
     );
@@ -309,9 +330,9 @@ class _ModuleScreenState extends State<ModuleScreen> {
     return InkWell(
       onTap: allLessonsCompleted
           ? () async {
-              // Load the quiz data first
+              // Load quiz data before navigation
               try {
-                // Show loading indicator
+                // Show loading indicator while fetching quiz
                 showDialog(
                   context: context,
                   barrierDismissible: false,
@@ -320,7 +341,7 @@ class _ModuleScreenState extends State<ModuleScreen> {
                   ),
                 );
 
-                // Load quiz from Firestore
+                // Fetch quiz from Firestore
                 final quizDoc = await FirebaseFirestore.instance
                     .collection('quizzes')
                     .doc(widget.module.quizId!)
@@ -329,7 +350,7 @@ class _ModuleScreenState extends State<ModuleScreen> {
                 if (!mounted) return;
 
                 if (!quizDoc.exists) {
-                  Navigator.pop(context); // Remove loading
+                  Navigator.pop(context); // Remove loading dialog
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Quiz not found'),
@@ -339,7 +360,7 @@ class _ModuleScreenState extends State<ModuleScreen> {
                   return;
                 }
 
-                // Create Quiz object from data
+                // Create Quiz model from Firestore data
                 final quizData = quizDoc.data()!;
                 final quiz = QuizModel.fromJson({
                   'id': quizDoc.id,
@@ -348,9 +369,9 @@ class _ModuleScreenState extends State<ModuleScreen> {
 
                 if (!mounted) return;
 
-                Navigator.pop(context); // Remove loading
+                Navigator.pop(context); // Remove loading dialog
 
-                // Navigate to quiz intro screen with the Quiz object
+                // Navigate to quiz intro screen
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -362,7 +383,7 @@ class _ModuleScreenState extends State<ModuleScreen> {
               } catch (e) {
                 if (!mounted) return;
 
-                Navigator.pop(context); // Remove loading
+                Navigator.pop(context); // Remove loading dialog
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text('Error loading quiz: $e'),
@@ -376,6 +397,7 @@ class _ModuleScreenState extends State<ModuleScreen> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
+          // Purple gradient for quiz cards to make them stand out
           gradient: LinearGradient(
             colors: allLessonsCompleted
                 ? [Colors.purple, Colors.purple.withValues(alpha: 0.7)]
@@ -387,6 +409,7 @@ class _ModuleScreenState extends State<ModuleScreen> {
         ),
         child: Row(
           children: [
+            // Quiz icon container
             Container(
               width: 50,
               height: 50,
@@ -401,6 +424,7 @@ class _ModuleScreenState extends State<ModuleScreen> {
               ),
             ),
             const SizedBox(width: 16),
+            // Quiz information
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -426,6 +450,7 @@ class _ModuleScreenState extends State<ModuleScreen> {
                 ],
               ),
             ),
+            // XP reward badge
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
