@@ -1,17 +1,5 @@
 # ProCode - AI-Powered Programming Learning App
 
-<p align="center">
-  <img src="assets/logo.png" alt="ProCode Logo" width="200"/>
-</p>
-
-<p align="center">
-  <a href="#features">Features</a> •
-  <a href="#installation">Installation</a> •
-  <a href="#usage">Usage</a> •
-  <a href="#technologies">Technologies</a> •
-  <a href="#contributing">Contributing</a> •
-  <a href="#license">License</a>
-</p>
 
 ## 📱 About ProCode
 
