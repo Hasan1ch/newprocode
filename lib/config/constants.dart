@@ -1,4 +1,5 @@
 import 'package:procode/models/achievement_model.dart';
+import 'package:procode/config/env_config.dart';
 
 // Main configuration file that stores all the app's constants and settings
 class AppConstants {
@@ -6,19 +7,11 @@ class AppConstants {
   static const String appName = 'ProCode';
   static const String appVersion = '1.0.0';
 
-  // API Keys for external services
-  // In production, these are fetched from environment variables for security
-  // The defaultValue is used during development for quick testing
-  static const String geminiApiKey = String.fromEnvironment(
-    'GEMINI_API_KEY',
-    defaultValue: 'AIzaSyBU11tY-o3SpExV5lXbS71Rs2LKhvcazr4',
-  );
-
-  // Judge0 API for code execution and compilation
-  static const String judge0ApiKey = String.fromEnvironment(
-    'JUDGE0_API_KEY',
-    defaultValue: '6a7488d9e2msh2d046a8ad2a723bp16d39ajsn7ed3c95e55b4',
-  );
+  // API Keys are now fetched from EnvConfig
+  // NEVER hardcode API keys in your source code
+  static String get geminiApiKey => EnvConfig.geminiApiKey;
+  static String get judge0ApiKey => EnvConfig.judge0ApiKey;
+  static String get judge0BaseUrl => EnvConfig.judge0BaseUrl;
 
   // External links for legal and support pages
   static const String termsUrl = 'https://procode.app/terms';
