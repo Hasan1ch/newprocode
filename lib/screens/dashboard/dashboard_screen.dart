@@ -430,16 +430,6 @@ class HomeTab extends StatelessWidget {
                         ),
                         const SizedBox(height: 24),
                       ],
-
-                      // Daily Challenge section
-                      Text(
-                        'Daily Challenge',
-                        style: theme.textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      const DailyChallengeCard(),
                     ],
                   ),
                 ),

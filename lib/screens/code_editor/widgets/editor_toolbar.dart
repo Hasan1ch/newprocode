@@ -47,7 +47,11 @@ class EditorToolbar extends StatelessWidget {
           _buildDropdown(
             icon: Icons.code,
             value: selectedLanguage,
-            items: ['Python', 'JavaScript', 'Java', 'HTML', 'CSS'],
+            items: [
+              'Python',
+              'JavaScript',
+              'Java',
+            ],
             onChanged: onLanguageChanged,
             width: 120,
           ),
