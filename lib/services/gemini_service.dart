@@ -13,7 +13,17 @@ import 'package:procode/utils/app_logger.dart';
 /// - Learning path generation
 class GeminiService {
   // API configuration - key stored securely in environment variables
-  static String get _apiKey => dotenv.env['GEMINI_API_KEY'] ?? '';
+  static String get _apiKey {
+    // PRODUCTION: Use compile-time constant from --dart-define
+    const String dartDefineKey = String.fromEnvironment('GEMINI_API_KEY');
+    if (dartDefineKey.isNotEmpty) {
+      return dartDefineKey;
+    }
+
+    // DEVELOPMENT: Use dotenv
+    return dotenv.env['GEMINI_API_KEY'] ?? '';
+  }
+
   static const String _baseUrl =
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
 

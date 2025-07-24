@@ -245,7 +245,7 @@ class DatabaseService {
 
   // Gamification operations
 
-  // Update user streak - FIXED VERSION
+  // Update user streak
   /// Calculates and updates the user's daily streak
   /// Handles consecutive days, broken streaks, and first-time users
   Future<void> updateStreak(String uid) async {

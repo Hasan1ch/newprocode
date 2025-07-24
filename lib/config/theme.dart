@@ -164,8 +164,8 @@ class AppTheme {
       ),
     ),
 
-    // Card design with subtle shadow
-    cardTheme: CardTheme(
+    // Card design with subtle shadow - FIXED: Changed from CardTheme to CardThemeData
+    cardTheme: CardThemeData(
       elevation: 2, // Subtle shadow
       shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16)), // Rounded corners
@@ -280,8 +280,8 @@ class AppTheme {
       brightness: Brightness.light,
     ),
 
-    // Modal dialog styling
-    dialogTheme: DialogTheme(
+    // Modal dialog styling - FIXED: Changed from DialogTheme to DialogThemeData
+    dialogTheme: DialogThemeData(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       elevation: 8,
       backgroundColor: AppColors.surfaceLight,
@@ -431,8 +431,8 @@ class AppTheme {
       ),
     ),
 
-    // Dark mode card styling
-    cardTheme: CardTheme(
+    // Dark mode card styling - FIXED: Changed from CardTheme to CardThemeData
+    cardTheme: CardThemeData(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       color: AppColors.surfaceDark,
@@ -548,8 +548,8 @@ class AppTheme {
       brightness: Brightness.dark,
     ),
 
-    // Dark mode dialogs
-    dialogTheme: DialogTheme(
+    // Dark mode dialogs - FIXED: Changed from DialogTheme to DialogThemeData
+    dialogTheme: DialogThemeData(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       elevation: 8,
       backgroundColor: AppColors.surfaceDark,
